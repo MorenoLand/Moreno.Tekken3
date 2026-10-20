@@ -4,6 +4,7 @@ const Title := preload("res://scripts/menu/title.gd")
 const CharacterSelect := preload("res://scripts/menu/character_select.gd")
 const FightView := preload("res://scripts/fight/fight_view.gd")
 const TheaterScreen := preload("res://scripts/menu/theater_screen.gd")
+const MusicPlayer := preload("res://scripts/menu/music_player.gd")
 const VsScreen := preload("res://scripts/menu/vs_screen.gd")
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
 const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE"]
@@ -115,8 +116,15 @@ func _theater_menu(start: int) -> void:
 	mode = "THEATER"
 	var menu := TheaterScreen.new(start)
 	menu.back.connect(_leave_theater)
+	menu.music.connect(_music_player.bind(0, true))
 	menu.play.connect(func(movie: int): _theater(movie, menu.cursor))
 	_swap(menu)
+func _music_player(start: int, remixed: bool) -> void:
+	var player := MusicPlayer.new(start, remixed)
+	player.play.connect(func(song: int, mode: bool): music.preview(song, mode))
+	player.theater.connect(func(): music.play_track("none"); _theater_menu(0))
+	player.back.connect(func(): music.play_track("none"); _leave_theater())
+	_swap(player)
 func _leave_theater() -> void:
 	mode = ""
 	_title()

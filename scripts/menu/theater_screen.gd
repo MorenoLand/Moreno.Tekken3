@@ -12,7 +12,7 @@ const TABLE := 0x1400
 const ROWS := [[40, 72, 6], [40, 136, 6], [40, 200, 6], [88, 264, 4]]
 const MOVIES := [20, 21, 9, 0, 1, 3, 4, 5, 2, 8, 6, 7, 11, 10, 16, 15, 17, 12, 13, 14, 19, 18]
 const ALTERNATE_NAMES := ["YOSHIMITSU,DOCTOR B.", "KUMA, PANDA", "GUN JACK -BAD-", "OGRE, TRUE OGRE"]
-const BUTTONS := [["DISC", Rect2(74, 336, 52, 28)], ["MUSIC", Rect2(154, 336, 61, 28)], ["EXIT", Rect2(244, 336, 52, 28)]]
+const BUTTONS := [["DISC", Rect2(74, 336, 52, 28), "INSERT TEKKEN 1, 2, OR 3 DISC"], ["MUSIC", Rect2(154, 336, 61, 28), "SELECT MUSIC MODE"], ["EXIT", Rect2(244, 336, 52, 28), "RETURN TO TITLE SCREEN"]]
 var bytes: PackedByteArray
 var font
 var items: Array = []
@@ -23,7 +23,8 @@ var thumbnail := TextureRect.new()
 var title := TextureRect.new()
 var lines := [TextureRect.new(), TextureRect.new()]
 var marker: Array = []
-var button_boxes: Array = []
+var button_labels: Array = []
+var note := TextureRect.new()
 func _init(start: int = 0) -> void:
 	cursor = start
 func _ready() -> void:
@@ -126,11 +127,8 @@ func _buttons() -> void:
 		for edge in [Rect2(area.position.x, area.position.y + 2, area.size.x, 2), Rect2(area.position.x, area.end.y - 2, area.size.x, 2), Rect2(area.position.x, area.position.y + 2, 2, area.size.y - 2), Rect2(area.end.x - 2, area.position.y + 2, 2, area.size.y - 2)]:
 			holder.add_child(_box(edge, Color.WHITE))
 		screen.add_child(holder)
-		var text: ImageTexture = font.render_clut(BUTTONS[i][0], 0, 0x7e1a)
-		_place(text, Vector2(area.position.x + (area.size.x - text.get_width()) / 2, 344))
-		var focus := _box(Rect2(area.position - Vector2(2, 0), area.size + Vector2(4, 4)), Color8(0xff, 0, 0, 90))
-		focus.visible = false
-		button_boxes.append(focus)
+		var label := _place(font.render_clut(BUTTONS[i][0], 0, 0x7e1a), Vector2(area.position.x + (area.size.x - BUTTONS[i][0].length() * 9) / 2, 344))
+		button_labels.append(label)
 func _info_box() -> void:
 	screen.add_child(_gradient(Rect2(18, 374, 332, 82), Color8(0, 0, 0x80), Color8(0, 0, 0x20)))
 	for edge in [Rect2(18, 374, 332, 4), Rect2(18, 452, 332, 4), Rect2(18, 374, 3, 82), Rect2(347, 374, 3, 82)]:
@@ -141,8 +139,7 @@ func _info_box() -> void:
 	screen.add_child(title)
 	for line in lines:
 		screen.add_child(line)
-	for focus in button_boxes:
-		screen.add_child(focus)
+	screen.add_child(note)
 func _centered(rect: TextureRect, texture: ImageTexture, y: float) -> void:
 	rect.texture = texture
 	rect.size = texture.get_size()
@@ -165,8 +162,14 @@ func _refresh() -> void:
 		marker[i].visible = show
 		marker[i].position = frame[i].position
 		marker[i].size = frame[i].size
-	for i in button_boxes.size():
-		button_boxes[i].visible = button == i
+	for i in button_labels.size():
+		button_labels[i].texture = font.render_clut(BUTTONS[i][0], 0, 0x7e15 if button == i else 0x7e1a)
+	for node in [thumbnail, title, lines[0], lines[1]]:
+		node.visible = button < 0
+	note.visible = button >= 0
+	if button >= 0:
+		_centered(note, font.render_clut(BUTTONS[button][2], 0, 0x7e16), 400)
+		return
 func _neighbour(row: int, column: int) -> int:
 	var best := -1
 	var gap := 99

@@ -36,6 +36,14 @@ func play_song(song: int) -> void:
 		stop()
 		return
 	_play(_track_path(entry), (flags & 0x7f) / 127.0)
+func preview(song: int, remixed: bool) -> void:
+	playing_name = "preview%d" % song
+	var e = _exe()
+	var at: int = SONG_TABLE + song * 4 + (2 if remixed else 0)
+	if (e.u8(at) & 0x80) != 0:
+		stop()
+		return
+	_play(_track_path(e.u8(at)), (e.u8(at + 1) & 0x7f) / 127.0)
 func play_track(track: String) -> void:
 	if track == "select":
 		play_song(SELECT_SONG)
