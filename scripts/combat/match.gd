@@ -15,6 +15,7 @@ const Secondary := preload("res://scripts/fighter/secondary.gd")
 const Volumes := preload("res://scripts/combat/hit_volumes.gd")
 const Hits := preload("res://scripts/combat/hits.gd")
 const BodyPush := preload("res://scripts/combat/body_push.gd")
+const Ai := preload("res://scripts/combat/ai.gd")
 const Damage := preload("res://scripts/combat/damage.gd")
 const Ball := preload("res://scripts/combat/ball.gd")
 const ACTORS := 0x800a9228
@@ -43,7 +44,11 @@ var computer := [false, true]
 var trace := false
 var skeleton
 var secondary
+var ai
 var ball
+var demo := false
+var ai_level := 1
+var ai_stage := 0
 var models: Array = []
 const JOINTS := 0x8f4
 const JOINT_SIZE := 0x44
@@ -51,6 +56,9 @@ func actor(p: int) -> int:
 	return ACTORS + p * STRIDE
 func setup(exe: PackedByteArray, common: PackedByteArray, first: PackedByteArray, second: PackedByteArray, first_model: PackedByteArray, second_model: PackedByteArray, model_ids: Array = [-1, -1]) -> void:
 	ram.load_bytes(0x80010000, exe.slice(0x800))
+	ram.w8(Ai.LEVEL, ai_level)
+	ram.w8(Ai.STAGE_LEVEL, ai_stage)
+	ram.w16(Ai.DEMO_FLAG, 1 if demo else 0)
 	motion = Motion.new(Exe.new(exe))
 	skeleton = Skeleton.new(Exe.new(exe))
 	models = [first_model, second_model]
@@ -71,6 +79,7 @@ func setup(exe: PackedByteArray, common: PackedByteArray, first: PackedByteArray
 		ram.w8(a + 0x20, 1 - p)
 		ram.w16(a + 0x12, p)
 		ram.w8(a + 0xc5, 1 if computer[p] else 0)
+		set_character(a, (model_ids[p] - 71) / 4 if model_ids[p] >= 71 else 0)
 		var scale: int = (models[p].decode_u32(4) << 12) / 100
 		ram.w16(a + 0x4ec, scale)
 		ram.w16(a + 0x4ee, scale)
@@ -81,6 +90,15 @@ func setup(exe: PackedByteArray, common: PackedByteArray, first: PackedByteArray
 		secondary.setup(actor(p), (model_ids[p] - 71) / 4 if model_ids[p] >= 71 else -1, models[p])
 	for p in 2:
 		start_actor(p)
+	ai = Ai.new(ram)
+	ai.start_match()
+func set_character(a: int, f: int) -> void:
+	var costume: int = f * 2
+	var info: int = ram.u32(0x80097d40 + (costume if costume <= 0x5c else 0x58) * 4)
+	ram.w16(a + 0x14, costume)
+	ram.w16(a + 0x16, ram.u8(info + 9))
+	ram.w16(a + 0x18, costume >> 2)
+	ram.w16(a + 0x1a, ram.u8(info + 8))
 func start_actor(p: int, reset_position: bool = true) -> void:
 	var a := actor(p)
 	var b := actor(1 - p)
@@ -326,6 +344,7 @@ func begin_round() -> void:
 		ball.start_round()
 		for p in 2:
 			start_actor(p, false)
+	ai.start_match()
 func finish_round() -> void:
 	var a0 := percent(0)
 	var a1 := percent(1)
@@ -382,6 +401,7 @@ func flow() -> void:
 					begin_round()
 var sounds: Array = []
 func tick() -> void:
+	ram.w32(Ai.FRAME_COUNTER, ram.u32(Ai.FRAME_COUNTER) + 1)
 	for p in 2:
 		var a := actor(p)
 		var b := MoveStep.opponent(ram, a)
@@ -476,6 +496,17 @@ func tick() -> void:
 	for p in 2:
 		var a := actor(p)
 		var live: bool = phase == Phase.FIGHT
-		Pad.push(ram, a, ram.u8(a + 0xc6), pads[p] if live else 0, edges[p] if live else 0)
+		var flip: int = ram.u8(a + 0xc6)
+		var pad: int = pads[p]
+		var edge: int = edges[p]
+		if ram.u8(a + 0xc5) != 0 and not practice:
+			flip = 0
+			pad = 0
+			edge = 0
+			if ram.u32(a + 0x3f4) != 0:
+				var out: Array = ai.step(a)
+				pad = out[0]
+				edge = out[1]
+		Pad.push(ram, a, flip, pad if live else 0, edge if live else 0)
 		MoveStep.choose_next(ram, a)
 	flow()
