@@ -18,7 +18,7 @@ var trail := [1.0, 1.0]
 var digits: Array = []
 var lamps: Array = []
 var labels: Array = []
-var banner := TextureRect.new()
+var banners: Array = [TextureRect.new(), TextureRect.new(), TextureRect.new()]
 var stage_label := TextureRect.new()
 var clock_label := TextureRect.new()
 var stage := 0
@@ -53,8 +53,8 @@ func _ready() -> void:
 		d.size = Vector2(16, 46)
 		screen.add_child(d)
 		digits.append(d)
-	banner.position = Vector2(0, 190)
-	screen.add_child(banner)
+	for banner in banners:
+		screen.add_child(banner)
 	for label in [stage_label, clock_label]:
 		label.scale = Vector2(0.75, 0.55)
 		label.position = Vector2(16, 24)
@@ -97,14 +97,18 @@ func _digit(n: int) -> AtlasTexture:
 	atlas.atlas = digit_texture
 	atlas.region = Rect2(n * 16, 0, 16, 46)
 	return atlas
-func say(text: String) -> void:
+func say(text: String, slot: int = 1) -> void:
+	var label: TextureRect = banners[slot]
 	if text == "":
-		banner.texture = null
+		label.texture = null
 		return
+	if label.get_meta("text", "") == text:
+		return
+	label.set_meta("text", text)
 	var tex: ImageTexture = font.texture(text, 2)
-	banner.texture = tex
-	banner.size = tex.get_size()
-	banner.position = Vector2(184 - tex.get_width() / 2, 200)
+	label.texture = tex
+	label.size = tex.get_size()
+	label.position = Vector2(184 - tex.get_width() / 2, [112, 228, 368][slot])
 func _clock(count: int) -> void:
 	if count == last_clock:
 		return

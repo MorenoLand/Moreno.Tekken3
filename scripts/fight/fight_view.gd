@@ -21,6 +21,8 @@ var cpus: Array = [null, null]
 var camera_ready := false
 var axis := Vector2(1, 0)
 var hud
+var title := ""
+var names: Array = []
 var previous := [0, 0]
 var streams := {}
 const STREAM_SPAN := 0x6000
@@ -87,6 +89,8 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 		hud.queue_free()
 	hud = Hud.new()
 	add_child(hud)
+	names = [_name(ids[0]), _name(ids[1])]
+	title = options.get("title", "")
 	hud.stage = options.get("stage", 0)
 	hud.base = options.get("base", 0)
 	hud.bind(sim, roster)
@@ -133,15 +137,44 @@ func _sound() -> void:
 		sfx.play_entry(event[0], event[1])
 	sim.sounds.clear()
 func _banner() -> void:
+	var final: bool = sim.round_number >= sim.rounds_to_win * 2 - 1
 	match sim.phase:
 		sim.Phase.INTRO:
-			hud.say("ROUND %d" % sim.round_number if sim.phase_frames < 100 else "FIGHT")
+			var first: bool = sim.round_number == 1
+			hud.say(title if title != "" else ("FINAL ROUND" if final else "ROUND %d" % sim.round_number), 0) if sim.phase_frames >= (61 if first else 1) else hud.say("", 0)
+			hud.say("READY?" if sim.phase_frames >= (106 if first else 46) else "", 1)
 		sim.Phase.FIGHT:
-			hud.say("FIGHT" if sim.phase_frames < 40 else "")
+			hud.say("", 0)
+			hud.say("", 1)
 		sim.Phase.ROUND_OVER:
-			hud.say("K.O." if sim.ram.u32(sim.actor(0) + 0x3f4) == 0 or sim.ram.u32(sim.actor(1) + 0x3f4) == 0 else "TIME UP")
+			var down := [sim.ram.u32(sim.actor(0) + 0x3f4) == 0, sim.ram.u32(sim.actor(1) + 0x3f4) == 0]
+			if down[0] and down[1]:
+				hud.say("DOUBLE K.O.")
+			elif not down[0] and not down[1]:
+				hud.say("TIME UP")
+			elif sim.fraction(1 if down[0] else 0) >= 1.0:
+				hud.say("PERFECT!")
+			else:
+				hud.say("K.O.")
+			hud.say(_result() if sim.phase_frames > 60 else "", 2)
+		sim.Phase.MATCH_OVER:
+			hud.say("")
 		_:
 			hud.say("")
+func _name(model: int) -> String:
+	var file := FileAccess.open("%s%03d.bin" % [BNS, model + 3], FileAccess.READ)
+	file.seek(1)
+	var costume: int = file.get_8() * 4
+	return exe.cstring(exe.u32(exe.u32(0x80097d40 + costume * 4)))
+func _result() -> String:
+	if sim.practice or (sim.wins[0] < sim.rounds_to_win and sim.wins[1] < sim.rounds_to_win):
+		return ""
+	if sim.wins[0] == sim.wins[1]:
+		return "DRAW"
+	var winner: int = 0 if sim.wins[0] > sim.wins[1] else 1
+	if sim.computer[1] and not sim.computer[0]:
+		return "YOU WIN!" if winner == 0 else "YOU LOSE"
+	return "%s WINS!" % names[winner]
 func _present() -> void:
 	for p in 2:
 		var a: int = sim.actor(p)

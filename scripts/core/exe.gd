@@ -26,3 +26,9 @@ func s32s(va: int, count: int) -> PackedInt32Array:
 	return out
 func u32(va: int) -> int:
 	return data.decode_u32(off(va))
+func cstring(va: int) -> String:
+	var o := off(va)
+	var e := o
+	while data[e] != 0:
+		e += 1
+	return data.slice(o, e).get_string_from_ascii()
