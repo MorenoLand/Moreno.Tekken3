@@ -14,6 +14,7 @@ var fighters: Array = []
 var clock := 0.0
 var stage_node
 signal finished(winner: int)
+signal quit
 var sim
 var paused := false
 var sfx
@@ -21,6 +22,10 @@ var cpus: Array = [null, null]
 var camera_ready := false
 var axis := Vector2(1, 0)
 var hud
+var pause_box: Control
+var pause_items: Array = []
+var pause_index := 0
+const PAUSE_ITEMS := ["CANCEL", "COMMAND", "RESET"]
 var title := ""
 var names: Array = []
 var previous := [0, 0]
@@ -116,9 +121,61 @@ func _pad(player: int) -> int:
 			bits |= PAD_BITS[name]
 	return bits
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("menu_start"):
-		paused = not paused
-		hud.say("PAUSE" if paused else "")
+	if sim == null or hud == null or hud.demo:
+		return
+	if event.is_action_pressed("menu_start") or (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE):
+		if paused and event.is_action_pressed("menu_start") == false:
+			_set_pause(false)
+		else:
+			_set_pause(not paused)
+		get_viewport().set_input_as_handled()
+		return
+	if not paused:
+		return
+	if event.is_action_pressed("menu_up") or event.is_action_pressed("menu_down"):
+		pause_index = (pause_index + (1 if event.is_action_pressed("menu_down") else PAUSE_ITEMS.size() - 1)) % PAUSE_ITEMS.size()
+		_pause_refresh()
+	elif event.is_action_pressed("menu_confirm"):
+		match pause_index:
+			0:
+				_set_pause(false)
+			2:
+				_set_pause(false)
+				quit.emit()
+	get_viewport().set_input_as_handled()
+func _set_pause(on: bool) -> void:
+	paused = on
+	pause_index = 0
+	if pause_box == null:
+		_build_pause()
+	pause_box.visible = on
+	_pause_refresh()
+func _build_pause() -> void:
+	pause_box = Control.new()
+	pause_box.visible = false
+	var frame := ColorRect.new()
+	frame.color = Color.WHITE
+	frame.position = Vector2(144, 97)
+	frame.size = Vector2(80, 72)
+	pause_box.add_child(frame)
+	var fill := ColorRect.new()
+	fill.color = Color(0.03, 0.06, 0.3)
+	fill.position = Vector2(146, 99)
+	fill.size = Vector2(76, 68)
+	pause_box.add_child(fill)
+	for i in PAUSE_ITEMS.size():
+		var row := TextureRect.new()
+		row.position = Vector2(152, 105 + i * 20)
+		pause_box.add_child(row)
+		pause_items.append(row)
+	hud.screen.add_child(pause_box)
+func _pause_refresh() -> void:
+	for i in PAUSE_ITEMS.size():
+		var clut := 0x7e11 if i == pause_index else 0x7e16
+		var tex: ImageTexture = hud.font.render_clut(PAUSE_ITEMS[i], 0, clut)
+		pause_items[i].texture = tex
+		pause_items[i].size = tex.get_size()
+		pause_items[i].modulate = Color(1, 1, 1, 0.45 if i == 1 else 1.0)
 func _process(delta: float) -> void:
 	if sim == null or paused:
 		return

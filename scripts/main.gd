@@ -238,6 +238,7 @@ func _fight(first: int, second: int, versus: bool = false, practice: bool = fals
 	var view := FightView.new()
 	_swap(view)
 	view.finished.connect(_after)
+	view.quit.connect(_select)
 	var variant := 1 if mode in ["ARCADE MODE", "TIME ATTACK MODE"] and ladder == LADDER and second == 20 else 0
 	view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second], variant)], home["stage"] % 15, [first, second], versus, practice, options)
 func _unhandled_input(event: InputEvent) -> void:
@@ -250,7 +251,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_aspect()
 	if event.is_action_pressed("menu_back"):
 		if current is FightView:
-			_select()
+			return
 		elif current is Movie and mode == "THEATER":
 			mode = ""
 			_title()

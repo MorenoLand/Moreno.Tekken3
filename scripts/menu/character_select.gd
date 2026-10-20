@@ -139,13 +139,13 @@ func _portrait_image(roster: int) -> ImageTexture:
 		var image := Tim.to_image(FileAccess.get_file_as_bytes(BNS + "009/p%02d.tim" % roster), 4)
 		for y in image.get_height():
 			var shade := 1.0
-			if y < 30:
-				shade = lerpf(0.02, 1.0, y / 30.0)
+			if y < 60:
+				shade = y / 60.0
 			elif y > 206:
-				shade = lerpf(1.0, 0.06, (y - 206) / 46.0)
+				shade = lerpf(1.0, 0.0, (y - 206) / 46.0)
 			for x in image.get_width():
 				var c := image.get_pixel(x, y)
-				image.set_pixel(x, y, Color(c.r * shade, c.g * shade, c.b * shade, c.a))
+				image.set_pixel(x, y, Color(c.r, c.g, c.b, c.a * shade))
 		cache[key] = ImageTexture.create_from_image(image)
 	return cache[key]
 func _fit_name(p: int, roster: int) -> void:
