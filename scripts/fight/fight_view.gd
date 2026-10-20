@@ -18,6 +18,7 @@ var paused := false
 var sfx
 var cpus: Array = [null, null]
 var camera_ready := false
+var axis := Vector2(1, 0)
 var hud
 var previous := [0, 0]
 var streams := {}
@@ -149,9 +150,9 @@ func _follow() -> void:
 	var second: Vector3 = fighters[1].position
 	var between := Vector2(second.x - first.x, second.z - first.z)
 	var gap := between.length()
-	if gap < 0.001:
-		return
-	var right := between / gap
+	if gap > 0.9 or not camera_ready:
+		axis = between / maxf(gap, 0.001)
+	var right := axis
 	var forward := Vector3(right.y, 0.0, -right.x)
 	var mid := (first + second) * 0.5
 	var distance := maxf(4.4, 2.6 + gap * 0.8)
