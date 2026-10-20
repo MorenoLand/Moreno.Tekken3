@@ -3,6 +3,22 @@ const Motion := preload("res://scripts/fighter/motion.gd")
 const Skeleton := preload("res://scripts/fighter/skeleton.gd")
 const Tim := preload("res://scripts/fighter/tim.gd")
 const SCALE := 0.001
+# Faces are lit flat; the normal comes from screen-space derivatives so the CPU only uploads positions.
+static var FLAT_SHADER := _flat_shader()
+static func _flat_shader() -> Shader:
+	var shader := Shader.new()
+	shader.code = """shader_type spatial;
+render_mode cull_disabled;
+uniform sampler2D albedo : source_color, filter_nearest;
+void fragment() {
+	vec4 c = texture(albedo, UV);
+	ALBEDO = c.rgb;
+	ALPHA = c.a;
+	ALPHA_SCISSOR_THRESHOLD = 0.5;
+	NORMAL = normalize(cross(dFdx(VERTEX), dFdy(VERTEX)));
+	ROUGHNESS = 1.0;
+}"""
+	return shader
 var model: PackedByteArray
 var rows: Array = []
 var motion
@@ -167,11 +183,9 @@ func _new_mesh(part: int, stream_row: int, poly_row: int, vram: PackedInt32Array
 	var list := []
 	for key in surfaces:
 		if not materials.has(key):
-			var m := StandardMaterial3D.new()
-			m.albedo_texture = ImageTexture.create_from_image(Tim.decode_page(vram, key[0], key[1]))
-			m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-			m.cull_mode = BaseMaterial3D.CULL_DISABLED
+			var m := ShaderMaterial.new()
+			m.shader = FLAT_SHADER
+			m.set_shader_parameter("albedo", ImageTexture.create_from_image(Tim.decode_page(vram, key[0], key[1])))
 			materials[key] = m
 		list.append({"key": key, "idx": surfaces[key]["idx"], "uv": surfaces[key]["uv"]})
 	return {"part": part, "stream": _read_stream(rows[stream_row][12]), "surfaces": list, "node": node}
@@ -221,29 +235,43 @@ func _run(mesh: Dictionary, pose: Array) -> Array:
 			t0[d] = _half(t0[d])
 		d += 1
 	return t0.slice(0, pos)
+var pending: Array = []
 func set_frame(frame_index: int, extra: Dictionary = {}) -> void:
+	compute_frame(frame_index, extra)
+	apply_frame()
+# compute_frame touches only this fighter's own data, so the two fighters can run on worker threads;
+# apply_frame (scene tree and mesh upload) runs on the main thread.
+func compute_frame(frame_index: int, extra: Dictionary = {}) -> void:
 	var pose: PackedInt32Array = motion.frame(stream_bytes, stream_start, frame_index)
 	var world: Dictionary = skeleton.world(model, pose, root_matrix, [pose[0], pose[1], pose[2]], extra)
+	pending = []
 	for mesh in meshes:
 		var slot: int = Skeleton.PART_SLOTS[mesh["part"]]
 		var verts := _run(mesh, world[slot])
-		var node: MeshInstance3D = mesh["node"]
-		var am := ArrayMesh.new()
+		var unique := PackedVector3Array()
+		unique.resize(verts.size())
+		for i in verts.size():
+			var v: Vector3i = verts[i]
+			unique[i] = Vector3(v.x, -v.y, -v.z) * SCALE
+		var surfaces := []
 		for surf in mesh["surfaces"]:
 			var idx: PackedInt32Array = surf["idx"]
 			var vs := PackedVector3Array()
-			var ns := PackedVector3Array()
+			vs.resize(idx.size())
 			for i in idx.size():
-				var v: Vector3i = verts[idx[i]]
-				vs.append(Vector3(v.x, -v.y, -v.z) * SCALE)
-			for t in idx.size() / 3:
-				var n := (vs[t * 3 + 2] - vs[t * 3]).cross(vs[t * 3 + 1] - vs[t * 3]).normalized()
-				ns.append_array([n, n, n])
+				vs[i] = unique[idx[i]]
+			surfaces.append(vs)
+		pending.append(surfaces)
+func apply_frame() -> void:
+	for m in meshes.size():
+		var mesh: Dictionary = meshes[m]
+		var am := ArrayMesh.new()
+		for k in mesh["surfaces"].size():
+			var surf: Dictionary = mesh["surfaces"][k]
 			var arrays := []
 			arrays.resize(Mesh.ARRAY_MAX)
-			arrays[Mesh.ARRAY_VERTEX] = vs
-			arrays[Mesh.ARRAY_NORMAL] = ns
+			arrays[Mesh.ARRAY_VERTEX] = pending[m][k]
 			arrays[Mesh.ARRAY_TEX_UV] = surf["uv"]
 			am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 			am.surface_set_material(am.get_surface_count() - 1, materials[surf["key"]])
-		node.mesh = am
+		(mesh["node"] as MeshInstance3D).mesh = am

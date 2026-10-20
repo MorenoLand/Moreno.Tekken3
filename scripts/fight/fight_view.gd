@@ -84,7 +84,7 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 		var id: int = ids[i]
 		f.setup(exe, _file("%s%03d.3dmk" % [BNS, id]), _file("%s%03d.bin" % [BNS, id + 3]), _file(BNS + "279.bin"), _file("%s%03d/00.tim" % [BNS, id + 2]), id)
 		fighters.append(f)
-	sim.match_over.connect(func(w): finished.emit(w))
+	sim.match_over.connect(func(w): finished.emit.call_deferred(w))
 	sim.computer = [false, not versus]
 	for p in 2:
 		sim.ram.w8(sim.actor(p) + 0xc5, 1 if sim.computer[p] else 0)
@@ -203,21 +203,39 @@ func _process(delta: float) -> void:
 		hud.size = size
 	if orbit >= 0.0:
 		_orbit(delta)
-# One simulation tick per physics frame (60 Hz); fighters, stage and camera are physics-interpolated,
-# so the picture stays smooth whatever the display refresh rate is.
+# One simulation tick per physics frame (60 Hz). The tick and the pose/mesh maths for the next
+# picture run on a worker thread while the main thread draws the previous one; the main thread
+# only joins, applies the meshes and reads the results. Fighters, stage and camera are
+# physics-interpolated, so the picture stays smooth whatever the display refresh rate is.
+var job := -1
 func _physics_process(_delta: float) -> void:
-	if orbit >= 0.0 or sim == null or paused:
+	if sim == null or orbit >= 0.0:
 		return
+	_join()
+	if paused:
+		return
+	var bits := [_pad(0), _pad(1)]
 	for p in 2:
-		var bits := _pad(p)
-		sim.pads[p] = bits
-		sim.edges[p] = bits & ~previous[p] & 0xf0
-		previous[p] = bits
+		sim.pads[p] = bits[p]
+		sim.edges[p] = bits[p] & ~previous[p] & 0xf0
+		previous[p] = bits[p]
+	job = WorkerThreadPool.add_task(_step)
+func _step() -> void:
 	sim.tick()
+	_compute()
+func _join() -> void:
+	if job == -1:
+		return
+	WorkerThreadPool.wait_for_task_completion(job)
+	job = -1
+	_apply()
 	_banner()
 	_sound()
 	_sparks()
-	_present()
+func _exit_tree() -> void:
+	if job != -1:
+		WorkerThreadPool.wait_for_task_completion(job)
+		job = -1
 func _sparks() -> void:
 	for hit in Hits.impacts:
 		var victim: int = hit[3]
@@ -270,6 +288,10 @@ func _result() -> String:
 		return "YOU WIN!" if winner == 0 else "YOU LOSE"
 	return "%s WINS!" % names[winner]
 func _present() -> void:
+	_compute()
+	_apply()
+func _compute() -> void:
+	var tasks := []
 	for p in 2:
 		var a: int = sim.actor(p)
 		var ram = sim.ram
@@ -281,7 +303,15 @@ func _present() -> void:
 		f.stream_bytes = streams[ptr]
 		f.stream_start = 0
 		f.frames = ram.u8(row + 0x18)
-		f.set_frame(clampi(ram.s16(a + 0x58) - 1, 0, maxi(f.frames - 1, 0)), sim.secondary_locals(p))
+		tasks.append(WorkerThreadPool.add_task(f.compute_frame.bind(clampi(ram.s16(a + 0x58) - 1, 0, maxi(f.frames - 1, 0)), sim.secondary_locals(p))))
+	for task in tasks:
+		WorkerThreadPool.wait_for_task_completion(task)
+func _apply() -> void:
+	var ram = sim.ram
+	for p in 2:
+		var a: int = sim.actor(p)
+		var f = fighters[p]
+		f.apply_frame()
 		f.position = Vector3(ram.s32(a), -ram.s32(a + 4), -ram.s32(a + 8)) * 0.001
 		f.rotation.y = 3.0 * PI / 2.0 - ram.u16(a + 0x2c) * TAU / 65536.0
 	_follow()
