@@ -47,16 +47,15 @@ func _ready() -> void:
 		rows.append(line)
 	_refresh()
 func _push_screen() -> void:
-	var tex: ImageTexture = font.texture("PUSH P1 AND/OR P2 BUTTON", 0)
+	var tex: ImageTexture = font.render_clut("PUSH P1 AND/OR P2 BUTTON", 0, 0x7e15)
 	prompt.texture = tex
 	prompt.size = tex.get_size()
 	prompt.position = Vector2(184 - tex.get_width() / 2.0, 362)
-	prompt.modulate = Color(1.0, 0.8, 0.1)
 	screen.add_child(prompt)
 	var logo := sprite(BNS + "000/p06.tim", Vector2(184 - 36, 394))
 	extras.append(logo)
 	for i in 2:
-		var line: ImageTexture = font.texture(["TM&@1994 1995 1996 1998 NAMCO LTD.", "ALL RIGHTS RESERVED"][i], 0)
+		var line: ImageTexture = font.render_clut(["TM&@1994 1995 1996 1998 NAMCO LTD.", "ALL RIGHTS RESERVED"][i], 0, 0x7e16)
 		var row := TextureRect.new()
 		row.texture = line
 		row.size = line.get_size()

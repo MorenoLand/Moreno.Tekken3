@@ -42,6 +42,7 @@ func _ready() -> void:
 		var path := "%sp%02d.tim" % [BNS + "010/", n]
 		if FileAccess.file_exists(path):
 			tims.append_array(Tim.stream(FileAccess.get_file_as_bytes(path)))
+	tims.append_array(Tim.stream(FileAccess.get_file_as_bytes(BNS + "009/p66.tim")))
 	vram = Tim.compose_absolute(tims)
 	lamp_off = _piece(Rect2i(240, 168, 15, 18), 0x7f19)
 	lamp_on = _piece(Rect2i(240, 168, 15, 18), 0x7f18)
@@ -86,13 +87,9 @@ func _ready() -> void:
 	for banner in banners:
 		screen.add_child(banner)
 	for label in [stage_label, clock_label]:
-		label.scale = Vector2(0.75, 0.55)
-		label.position = Vector2(16, 24)
+		label.position = Vector2(19, 24)
 		screen.add_child(label)
-	clock_label.position = Vector2(96, 24)
-	clock_label.scale = Vector2(0.58, 0.55)
-	stage_label.scale = Vector2(0.73, 0.55)
-	stage_label.modulate = Color(1.0, 0.5, 0.1)
+	clock_label.position = Vector2(94, 24)
 func _piece(region: Rect2i, clut: int) -> ImageTexture:
 	return ImageTexture.create_from_image(Tim.decode_region(vram, 0xd, clut, region))
 func _column(clut: int) -> TextureRect:
@@ -108,21 +105,18 @@ func bind(match_sim, roster_indices: Array) -> void:
 	for p in 2:
 		var label: TextureRect = labels[p]
 		var index: int = roster[p]
-		var atlas := AtlasTexture.new()
-		atlas.atlas = names_texture
-		atlas.region = Rect2(0, index * 16, 128, 16) if index < NAMES_COLUMN else Rect2(129, (index - NAMES_COLUMN) * 16, 127, 16)
-		var image := names_texture.get_image().get_region(Rect2i(atlas.region))
-		var left := int(atlas.region.size.x)
+		var region := Rect2i(0, index * 16, 128, 16) if index < NAMES_COLUMN else Rect2i(129, (index - NAMES_COLUMN) * 16, 127, 16)
+		var image: Image = Tim.decode_region(vram, 0xb, 0x7f12, region)
+		var left := region.size.x
 		var right := 0
-		for x in int(atlas.region.size.x):
+		for x in region.size.x:
 			for y in 16:
 				if image.get_pixel(x, y).a > 0.1:
 					left = mini(left, x)
 					right = maxi(right, x + 1)
 		var width: int = maxi(right - left, 1)
-		atlas.region = Rect2(atlas.region.position.x + left, atlas.region.position.y, width, 16)
-		label.texture = atlas
-		label.size = atlas.region.size
+		label.texture = ImageTexture.create_from_image(image.get_region(Rect2i(left, 0, width, 16)))
+		label.size = Vector2(width, 16)
 		var at := 14.0 if p == 0 else 354.0 - width
 		label.position = Vector2(at, 66)
 		plates[p].position = Vector2(at - 4, 75)
@@ -147,23 +141,21 @@ func say(text: String, slot: int = 1) -> void:
 	label.size = tex.get_size()
 	label.position = Vector2(184 - tex.get_width() / 2, [112, 228, 368][slot])
 func show_coin() -> void:
-	var tex: ImageTexture = font.texture("INSERT COIN", 0)
+	var tex: ImageTexture = font.render_clut("INSERT COIN", 0, 0x7e15)
 	var label := TextureRect.new()
 	label.texture = tex
 	label.size = tex.get_size()
-	label.modulate = Color(1.0, 0.8, 0.1)
-	label.position = Vector2(236, 22)
+	label.position = Vector2(253, 24)
 	screen.add_child(label)
 func start_demo() -> void:
 	demo = true
 	for plate in plates:
 		plate.texture = _piece(Rect2i(220, 168, 1, 10), 0x7f11)
 	for i in 2:
-		var tex: ImageTexture = font.texture("PUSH P%d START" % (i + 1), 0)
+		var tex: ImageTexture = font.render_clut("PUSH P%d START" % (i + 1), 0, 0x7e15)
 		var label := TextureRect.new()
 		label.texture = tex
 		label.size = tex.get_size()
-		label.modulate = Color(1.0, 0.8, 0.1)
 		label.position = Vector2(30 if i == 0 else 226, 22)
 		screen.add_child(label)
 		demo_labels.append(label)
@@ -177,7 +169,7 @@ func _clock(count: int) -> void:
 		return
 	last_clock = count
 	var seconds := count / 60
-	var tex: ImageTexture = font.texture("%02d'%02d\"%02d" % [seconds / 60, seconds % 60, (count % 60) * 100 / 60], 1)
+	var tex: ImageTexture = font.render_clut("%02d'%02d\"%02d" % [seconds / 60, seconds % 60, (count % 60) * 100 / 60], 0, 0x7e15)
 	clock_label.texture = tex
 	clock_label.size = tex.get_size()
 func _process(_delta: float) -> void:
@@ -185,7 +177,7 @@ func _process(_delta: float) -> void:
 		return
 	if stage > 0:
 		if stage_label.texture == null:
-			var tex: ImageTexture = font.texture("STAGE %d" % stage, 1)
+			var tex: ImageTexture = font.render_clut("STAGE %d" % stage, 0, 0x7e17)
 			stage_label.texture = tex
 			stage_label.size = tex.get_size()
 		_clock(base + sim.elapsed)
