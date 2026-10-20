@@ -19,6 +19,19 @@ This reads the disc once and writes the ignored `assets/` folder: every archive 
 
 Then open the folder with Redot 26.2 and run the main scene (title, character select, fight view; F2 toggles the original 4:3 shape, the default fills the window; keyboard and controller). The asset browser is `scenes/browser/asset_browser.tscn`: a browser for the extracted textures, the two CD music tracks, every sound-bank sample and every fighter animated with all of its moves selectable (drag to orbit, wheel to zoom).
 
+## Playing
+
+Run the main scene. The intro movie leads to the title menu: arcade (ten fights), VS, team battle, time attack, survival, practice, theater and option modes. Tekken Ball and Tekken Force are not ported yet.
+
+Default keys, both remappable under Option Mode, Key Configuration (a controller works out of the box, the d-pad or left stick moves, X / Y / A / B are the four attack buttons, Start pauses):
+
+| | Move | LP | RP | LK | RK | Start |
+|---|---|---|---|---|---|---|
+| Player 1 | W A S D | U | I | J | K | Enter |
+| Player 2 | arrow keys | Num 4 | Num 5 | Num 1 | Num 2 | Num Enter |
+
+F2 switches between the widescreen view and the original 4:3 shape.
+
 ## Status
 
-Early. Done: disc reader, extractor, asset browser, and a native fighter pipeline in GDScript (model streams, textures from the game's own TIMs, the keyframe motion decoder, skeleton and limb IK) that plays each fighter's idle animation. Not done: the move list, the fight engine, menus, movies. Nothing is playable yet.
+Playable. The fight engine (input history, cancel lists, move playback, movement, hit detection, damage, reactions, rounds) is ported from the game's own code and its sound effects, voices, music and stages are read from the disc. The fighters, the fifteen stages, the HUD, the menus and the movies are native. The computer opponent is a simple stand-in, not the original AI, and the in-fight camera is a plain follow camera. Not done: the original AI, the camera shots, Tekken Ball, Tekken Force, the arcade endings and the record screens.
