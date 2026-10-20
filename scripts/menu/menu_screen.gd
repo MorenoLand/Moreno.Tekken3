@@ -36,10 +36,10 @@ func _layout() -> void:
 	var k := size.y / 480.0
 	screen.scale = Vector2(k * PIXEL_ASPECT, k)
 	screen.position = Vector2((size.x - 368.0 * k * PIXEL_ASPECT) / 2.0, 0.0)
-func tim_texture(path: String, gain: float = 1.0) -> ImageTexture:
-	var key := "%s@%s" % [path, gain]
+func tim_texture(path: String, gain: float = 1.0, bands: int = 0) -> ImageTexture:
+	var key := "%s@%s@%d" % [path, gain, bands]
 	if not cache.has(key):
-		var image := Tim.to_image(FileAccess.get_file_as_bytes(path))
+		var image := Tim.to_image(FileAccess.get_file_as_bytes(path), bands)
 		if gain != 1.0:
 			for y in image.get_height():
 				for x in image.get_width():

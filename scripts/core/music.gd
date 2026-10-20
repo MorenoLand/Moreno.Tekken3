@@ -1,7 +1,7 @@
 extends AudioStreamPlayer
 const Options := preload("res://scripts/core/options.gd")
 const Exe := preload("res://scripts/core/exe.gd")
-const TRACKS := {"title": "res://assets/movies/20.ogg"}
+const TRACKS := {"title": "res://assets/audio/xa/c2_1.ogg"}
 const SONG_TABLE := 0x80024fd0
 const XA_TABLE := 0x80024d78
 const XA_BASE := 604

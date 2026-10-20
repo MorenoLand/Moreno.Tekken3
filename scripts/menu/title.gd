@@ -7,14 +7,17 @@ const TINTS := [Color(1.0, 0.72, 0.25), Color(0.35, 0.9, 1.0), Color(0.9, 0.2, 0
 const ROWS := [-2, -1, 0, 1, 2]
 var font
 var rows: Array = []
+var bar := ColorRect.new()
 var selected := 0
+var pushed := false
+var prompt := TextureRect.new()
+var blink := 0
 func _ready() -> void:
 	var exe = Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02"))
 	font = GameFont.new(exe, BNS + "010/")
 	for r in 2:
 		for c in 3:
 			sprite(BNS + "000/p%02d.tim" % (r * 3 + c), Vector2(c * 128, r * 256))
-	var bar := ColorRect.new()
 	bar.color = Color(1, 1, 1, 0.25)
 	bar.position = Vector2(-400, 358)
 	bar.size = Vector2(1200, 34)
@@ -23,8 +26,22 @@ func _ready() -> void:
 		var line := TextureRect.new()
 		screen.add_child(line)
 		rows.append(line)
+	var tex: ImageTexture = font.texture("PUSH P1 AND/OR P2 BUTTON", 1)
+	prompt.texture = tex
+	prompt.size = tex.get_size()
+	prompt.scale = Vector2(0.8, 0.6)
+	prompt.position = Vector2(184 - tex.get_width() * 0.4, 380)
+	prompt.modulate = Color(1.0, 0.6, 0.15)
+	screen.add_child(prompt)
+	bar.visible = false
 	_refresh()
+func _process(_delta: float) -> void:
+	blink += 1
+	prompt.visible = not pushed and (blink / 30) % 2 == 0
 func _refresh() -> void:
+	for r in rows:
+		r.visible = pushed
+	bar.visible = pushed
 	for i in ROWS.size():
 		var item: String = ITEMS[(selected + ROWS[i] + ITEMS.size()) % ITEMS.size()]
 		var tex: ImageTexture = font.texture(item, 2)
@@ -36,6 +53,14 @@ func _refresh() -> void:
 		line.modulate = TINTS[mini(absi(ROWS[i]), 3)] if ROWS[i] == 0 else TINTS[mini(absi(ROWS[i]) + 1, 3)]
 		line.modulate.a = 1.0 if absi(ROWS[i]) < 2 else 0.5
 func _unhandled_input(event: InputEvent) -> void:
+	if not pushed:
+		for a in ["menu_start", "menu_confirm", "p1_start", "p2_start", "p1_lk", "p2_lk", "p1_lp", "p2_lp", "p1_rp", "p2_rp", "p1_rk", "p2_rk"]:
+			if event.is_action_pressed(a):
+				pushed = true
+				blip(BLIP_CONFIRM)
+				_refresh()
+				return
+		return
 	if event.is_action_pressed("menu_down"):
 		selected = (selected + 1) % ITEMS.size()
 		blip(BLIP_CURSOR)

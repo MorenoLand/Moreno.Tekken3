@@ -65,7 +65,7 @@ static func decode_page(vram: PackedInt32Array, page: int, clut: int) -> Image:
 				img.set_pixel(i * 2, y, pal[w2 & 255])
 				img.set_pixel(i * 2 + 1, y, pal[w2 >> 8])
 	return img
-static func to_image(b: PackedByteArray) -> Image:
+static func to_image(b: PackedByteArray, bands: int = 0) -> Image:
 	var t := _parse(b, 0)
 	var mode := b.decode_u32(4) & 3
 	var w: int = t["words"] * (4 if mode == 0 else 2 if mode == 1 else 1)
@@ -77,8 +77,11 @@ static func to_image(b: PackedByteArray) -> Image:
 	for i in colors:
 		pal.append(_rgba(t["clut"][i]) if t["clut"].size() > i else Color8(i * 255 / (colors - 1), i * 255 / (colors - 1), i * 255 / (colors - 1), 0 if i == 0 else 255))
 	for y in h:
+		var shift: int = (y * bands / h) * (256 / bands) if bands > 0 else 0
 		for x in w:
-			if mode == 0:
+			if bands > 0 and mode == 1:
+				img.set_pixel(x, y, _rgba(t["clut"][mini(data[y * w + x] + shift, 255)]))
+			elif mode == 0:
 				img.set_pixel(x, y, pal[data[y * (w / 2) + x / 2] >> (4 * (x & 1)) & 15])
 			elif mode == 1:
 				img.set_pixel(x, y, pal[data[y * w + x]])
