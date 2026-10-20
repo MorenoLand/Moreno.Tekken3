@@ -19,7 +19,7 @@ var paused := false
 var sfx
 var cpus: Array = [null, null]
 var camera_ready := false
-var axis := Vector2(-1, 0)
+var axis := Vector2(1, 0)
 var hud
 var title := ""
 var names: Array = []
@@ -188,8 +188,8 @@ func _present() -> void:
 		f.stream_start = 0
 		f.frames = ram.u8(row + 0x18)
 		f.set_frame(clampi(ram.s16(a + 0x58) - 1, 0, maxi(f.frames - 1, 0)))
-		f.position = Vector3(-ram.s32(a), -ram.s32(a + 4), -ram.s32(a + 8)) * 0.001
-		f.rotation.y = ram.u16(a + 0x2c) * TAU / 65536.0 + 3.0 * PI / 2.0
+		f.position = Vector3(ram.s32(a), -ram.s32(a + 4), -ram.s32(a + 8)) * 0.001
+		f.rotation.y = 3.0 * PI / 2.0 - ram.u16(a + 0x2c) * TAU / 65536.0
 	_follow()
 func _follow() -> void:
 	var first: Vector3 = fighters[0].position
@@ -198,11 +198,11 @@ func _follow() -> void:
 	var gap := between.length()
 	if gap > 0.9 or not camera_ready:
 		var turn := 0.0
-		if between.x < -0.5:
-			turn = clampf(atan2(-between.y, -between.x), -0.3, 0.3)
-		elif between.x > 0.5:
+		if between.x > 0.5:
 			turn = clampf(atan2(between.y, between.x), -0.3, 0.3)
-		axis = Vector2(-cos(turn), -sin(turn))
+		elif between.x < -0.5:
+			turn = clampf(atan2(-between.y, -between.x), -0.3, 0.3)
+		axis = Vector2(cos(turn), sin(turn))
 	var right := axis
 	var forward := Vector3(right.y, 0.0, -right.x)
 	var mid := (first + second) * 0.5

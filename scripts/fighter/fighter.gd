@@ -225,9 +225,9 @@ func set_frame(frame_index: int) -> void:
 			var ns := PackedVector3Array()
 			for i in idx.size():
 				var v: Vector3i = verts[idx[i]]
-				vs.append(Vector3(v.x, -v.y, v.z) * SCALE)
+				vs.append(Vector3(v.x, -v.y, -v.z) * SCALE)
 			for t in idx.size() / 3:
-				var n := (vs[t * 3 + 1] - vs[t * 3]).cross(vs[t * 3 + 2] - vs[t * 3]).normalized()
+				var n := (vs[t * 3 + 2] - vs[t * 3]).cross(vs[t * 3 + 1] - vs[t * 3]).normalized()
 				ns.append_array([n, n, n])
 			var arrays := []
 			arrays.resize(Mesh.ARRAY_MAX)

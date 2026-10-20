@@ -27,7 +27,7 @@ func load_stage(index: int) -> void:
 			var corners := []
 			for i in count:
 				var p := vertex_start + model[o + size - 4 + i] * 8
-				corners.append(Vector3(model.decode_s16(p), -model.decode_s16(p + 2), model.decode_s16(p + 4)) * SCALE)
+				corners.append(Vector3(model.decode_s16(p), -model.decode_s16(p + 2), -model.decode_s16(p + 4)) * SCALE)
 			var shade := Color(model[o] / 128.0, model[o + 1] / 128.0, model[o + 2] / 128.0)
 			if flat:
 				polys.append({"key": FLAT, "uv": [0, 0, 0, 0], "pos": corners, "shade": shade})
@@ -112,8 +112,8 @@ func load_floor(index: int) -> void:
 			var order: Array = [[0, 1, 2, 3], [1, 0, 3, 2], [2, 3, 0, 1], [3, 2, 1, 0]][w0 >> 25 & 3]
 			var origin := Vector2(c % GRID * TILE, c / GRID * TILE)
 			var x0 := (i - 0.5) * CELL
-			var z0 := (j - 0.5) * CELL
-			var corner := [Vector3(x0, 0, z0), Vector3(x0 + CELL, 0, z0), Vector3(x0, 0, z0 + CELL), Vector3(x0 + CELL, 0, z0 + CELL)]
+			var z0 := -(j - 0.5) * CELL
+			var corner := [Vector3(x0, 0, z0), Vector3(x0 + CELL, 0, z0), Vector3(x0, 0, z0 - CELL), Vector3(x0 + CELL, 0, z0 - CELL)]
 			for q in [0, 1, 2, 2, 1, 3]:
 				var o: int = base[order[q]]
 				verts.append(corner[q])
