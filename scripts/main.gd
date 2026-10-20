@@ -3,6 +3,7 @@ const Movie := preload("res://scripts/menu/movie_screen.gd")
 const Title := preload("res://scripts/menu/title.gd")
 const CharacterSelect := preload("res://scripts/menu/character_select.gd")
 const FightView := preload("res://scripts/fight/fight_view.gd")
+const TheaterScreen := preload("res://scripts/menu/theater_screen.gd")
 const VsScreen := preload("res://scripts/menu/vs_screen.gd")
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
 const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE"]
@@ -82,7 +83,7 @@ func _mode(item: String) -> void:
 	if item == "QUIT GAME":
 		get_tree().quit()
 	elif item == "THEATER MODE":
-		_theater(0)
+		_theater_menu(0)
 	elif item == "TEKKEN BALL MODE" or item == "TEKKEN FORCE MODE":
 		_summary([item, "NOT AVAILABLE YET"], _title)
 	elif item == "OPTION MODE":
@@ -110,11 +111,20 @@ func _model_for(character: int, variant: int = 0) -> int:
 				return id
 			seen += 1
 	return 71
-func _theater(index: int) -> void:
+func _theater_menu(start: int) -> void:
+	mode = "THEATER"
+	var menu := TheaterScreen.new(start)
+	menu.back.connect(_leave_theater)
+	menu.play.connect(func(movie: int): _theater(movie, menu.cursor))
+	_swap(menu)
+func _leave_theater() -> void:
+	mode = ""
+	_title()
+func _theater(index: int, cursor: int = 0) -> void:
 	var movie := Movie.new()
 	_swap(movie)
 	movie.play(index)
-	movie.finished.connect(func(): _theater((index + 1) % 22) if mode == "THEATER" else _title())
+	movie.finished.connect(func(): _theater_menu(cursor))
 	mode = "THEATER"
 func _start_fight(first: int, second: int) -> void:
 	if mode == "TEAM BATTLE MODE":
@@ -262,7 +272,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		if current is FightView:
 			return
 		elif current is Movie and mode == "THEATER":
-			mode = ""
-			_title()
+			_theater_menu(0)
 		elif current is CharacterSelect:
 			_title()
