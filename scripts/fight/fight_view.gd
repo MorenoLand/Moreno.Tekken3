@@ -14,6 +14,7 @@ var clock := 0.0
 var stage_node
 signal finished(winner: int)
 var sim
+var paused := false
 var sfx
 var health := [0, 0]
 var attacking := [0, 0]
@@ -45,7 +46,7 @@ func _ready() -> void:
 	env.environment.ambient_light_color = Color(0.7, 0.7, 0.75)
 	viewport.add_child(env)
 	exe = Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02"))
-func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: bool = false) -> void:
+func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: bool = false, practice: bool = false) -> void:
 	if stage_node != null:
 		stage_node.queue_free()
 	stage_node = Stage.new()
@@ -73,7 +74,8 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 	sfx = Sfx.new()
 	add_child(sfx)
 	sfx.setup(ids)
-	cpus = [null, Cpu.new() if not versus else null]
+	cpus = [null, Cpu.new() if not versus and not practice else null]
+	sim.practice = practice
 	health = [sim.ram.u32(sim.actor(0) + 0x3f4), sim.ram.u32(sim.actor(1) + 0x3f4)]
 	clock = 0.0
 	if hud != null:
@@ -90,8 +92,12 @@ func _pad(player: int) -> int:
 		if Input.is_action_pressed("p%d_%s" % [player + 1, name]):
 			bits |= PAD_BITS[name]
 	return bits
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("menu_start"):
+		paused = not paused
+		hud.say("PAUSE" if paused else "")
 func _process(delta: float) -> void:
-	if sim == null:
+	if sim == null or paused:
 		return
 	clock += delta
 	var stepped := false

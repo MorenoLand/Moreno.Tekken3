@@ -19,6 +19,7 @@ var ram = Ram.new()
 var pads := [0, 0]
 var edges := [0, 0]
 var motion
+var practice := false
 signal round_over(winner: int)
 signal match_over(winner: int)
 enum Phase {INTRO, FIGHT, ROUND_OVER, MATCH_OVER}
@@ -317,7 +318,8 @@ func flow() -> void:
 				phase = Phase.FIGHT
 				phase_frames = 0
 		Phase.FIGHT:
-			timer -= 1
+			if not practice:
+				timer -= 1
 			if ram.u32(actor(0) + 0x3f4) == 0 or ram.u32(actor(1) + 0x3f4) == 0 or timer < 1:
 				finish_round()
 		Phase.ROUND_OVER:
