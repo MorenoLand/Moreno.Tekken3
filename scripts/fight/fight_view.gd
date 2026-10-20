@@ -372,7 +372,6 @@ func _follow() -> void:
 	camera.position = camera.position.lerp(wanted, 0.2) if camera_ready else wanted
 	camera_ready = true
 	camera.look_at(target)
-	ball_view.backdrop.position = Vector3(camera.position.x, 0.0, camera.position.z)
 func _follow_ball() -> void:
 	var first: Vector3 = fighters[0].position
 	var second: Vector3 = fighters[1].position
