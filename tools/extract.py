@@ -7,6 +7,7 @@ import disc
 import formats
 import audio
 import models
+import pose
 BNS = "TEKKEN3/TEKKEN3.BNS"
 def find_disc(arg):
     if arg:
@@ -88,14 +89,22 @@ def extract_audio(d, cue, out, overwrite):
             if write(out / "audio" / "cdda" / ("track%02d.wav" % t["number"]), audio.wav_bytes(audio.cdda_pcm(t), 44100, 2), overwrite):
                 n += 1
     return n
-def extract_models(out, overwrite):
+def extract_models(d, out, overwrite):
     n = 0
+    exe = pose.Exe(d.file("TEKKEN3/SLUS_004.02"))
+    motion, skel = pose.Motion(exe), pose.Pose(exe)
+    common = (out / "bns" / "279.bin").read_bytes()
     for p in sorted((out / "bns").glob("*.3dmk")):
+        fighter = (int(p.stem) - 71) // 4
+        model = p.read_bytes()
+        character = (out / "bns" / ("%03d.bin" % (int(p.stem) + 3))).read_bytes()
+        world = pose.skeleton(model, skel, pose.idle_pose(motion, character, common), pose.FACING)
+        poses = [world.get(s, (pose.IDENTITY, [0, 0, 0])) for s in range(32)]
         arc = out / "bns" / ("%03d" % (int(p.stem) + 2)) / "00.tim"
         vram = formats.compose_vram(formats.tim_stream(arc.read_bytes())) if arc.exists() else None
         surfaces = {}
         parts = []
-        for m in models.build_parts(p.read_bytes(), [models.IDENTITY] * 32):
+        for m in models.build_parts(model, poses):
             bykey = {}
             for poly in m["polys"]:
                 key = (poly["page"], poly["clut"])
@@ -135,7 +144,7 @@ def main():
     if everything or a.textures:
         print("textures:", extract_textures(out, a.overwrite))
     if everything or a.models:
-        print("models:", extract_models(out, a.overwrite))
+        print("models:", extract_models(disc.Disc(find_disc(a.disc)), out, a.overwrite))
     if everything or a.audio:
         cue = find_disc(a.disc)
         print("audio files:", extract_audio(disc.Disc(cue), cue, out, a.overwrite))

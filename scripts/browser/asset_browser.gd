@@ -59,7 +59,8 @@ func _add_tab(title: String, dir: String, ext: String, is_image: bool) -> void:
 		status.text = "Missing %s. Run: python tools/extract.py <disc.cue>" % dir
 func _add_model_tab() -> void:
 	var files: Array[String] = []
-	_collect(ASSETS + "/models", ".json", files)
+	for d in DirAccess.get_directories_at(ASSETS + "/models"):
+		files.append(ASSETS + "/models/" + d)
 	files.sort()
 	var split := HSplitContainer.new()
 	split.name = "Models"
