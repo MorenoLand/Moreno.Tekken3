@@ -1,6 +1,7 @@
 extends RefCounted
 const PATH := "user://save.cfg"
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
+# Keys are portrait/roster ids (exe name table order).
 const LOCKED_AT_START := {16: 1, 15: 5, 17: 8, 19: 10}
 static var data := {"endings": [], "usage": {}, "time_attack": {}, "survival": 0, "clears": 0, "unlock_all": false}
 static var loaded := false
@@ -27,10 +28,10 @@ static func unlocked(roster: int) -> bool:
 	_load()
 	if data["unlock_all"]:
 		return true
-	var need := required(ROSTER_TO_CHARACTER[roster])
+	var need := required(roster)
 	return need == 0 or data["endings"].size() >= need
 static func hint(roster: int) -> String:
-	return "CLEAR ARCADE WITH %d CHARACTERS" % required(ROSTER_TO_CHARACTER[roster])
+	return "CLEAR ARCADE WITH %d CHARACTERS" % required(roster)
 static func record_clear(character: int) -> Array:
 	_load()
 	var before := []

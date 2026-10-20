@@ -6,6 +6,8 @@ const FightView := preload("res://scripts/fight/fight_view.gd")
 const TheaterScreen := preload("res://scripts/menu/theater_screen.gd")
 const MusicPlayer := preload("res://scripts/menu/music_player.gd")
 const VsScreen := preload("res://scripts/menu/vs_screen.gd")
+# Disc movie per portrait id (oracle theater reads: Gon 18, Anna 17, Doctor B shares Yoshimitsu's, True Ogre Ogre's).
+const ENDING_MOVIE := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 17, 4, 14]
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
 const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE"]
 const Save := preload("res://scripts/core/save.gd")
@@ -187,7 +189,8 @@ func _clock(count: int) -> String:
 	var seconds := count / 60
 	return "%02d'%02d\"%02d" % [seconds / 60, seconds % 60, (count % 60) * 100 / 60]
 func _finish_run() -> void:
-	var character: int = ROSTER_TO_CHARACTER[picked[0]]
+	var character: int = picked[0]
+	var ending: int = ENDING_MOVIE[picked[0]]
 	var lines := ["CONGRATULATIONS"]
 	if mode == "TIME ATTACK MODE":
 		lines.append("TIME " + _clock(frames))
@@ -198,17 +201,17 @@ func _finish_run() -> void:
 		lines.append("NEW CHARACTER")
 		lines.append(_roster_name(r))
 	var after := func(): _summary(lines, _title)
-	if FileAccess.file_exists("res://assets/movies/%02d.ogv" % character):
+	if FileAccess.file_exists("res://assets/movies/%02d.ogv" % ending):
 		var movie := Movie.new()
 		_swap(movie)
-		movie.play(character)
+		movie.play(ending)
 		movie.finished.connect(after)
 	else:
 		after.call()
 func _roster_name(roster: int) -> String:
 	if exe == null:
 		exe = Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02"))
-	return exe.cstring(exe.u32(exe.u32(0x80097d40 + ROSTER_TO_CHARACTER[roster] * 16)))
+	return exe.cstring(exe.u32(exe.u32(0x80097d40 + roster * 16)))
 func _after(winner: int) -> void:
 	var sim = current.sim
 	frames += sim.elapsed
@@ -251,7 +254,7 @@ func _after(winner: int) -> void:
 func _home(roster: int) -> Dictionary:
 	if exe == null:
 		exe = Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02"))
-	var record: int = exe.u32(0x80097d40 + ROSTER_TO_CHARACTER[roster] * 16)
+	var record: int = exe.u32(0x80097d40 + roster * 16)
 	return {"stage": exe.u8(record + 10), "song": exe.u8(record + 11)}
 func _fight(first: int, second: int, versus: bool = false, practice: bool = false, options: Dictionary = {}) -> void:
 	if mode == "ATTRACT":
