@@ -3,6 +3,7 @@ signal done
 const Exe := preload("res://scripts/core/exe.gd")
 const GameFont := preload("res://scripts/menu/font.gd")
 const Options := preload("res://scripts/core/options.gd")
+const Save := preload("res://scripts/core/save.gd")
 const WINDOW := 8
 const BUTTON_NAMES := ["up", "down", "left", "right", "lp", "rp", "lk", "rk", "start"]
 const GAME_ROWS := [
@@ -35,10 +36,18 @@ func _rows() -> Array:
 	var rows: Array = []
 	match page:
 		"top":
-			rows = [["GAME OPTION", ""], ["KEY CONFIGURATION", ""], ["EXIT", ""]]
+			rows = [["GAME OPTION", ""], ["KEY CONFIGURATION", ""], ["RECORDS", ""], ["EXIT", ""]]
 		"game":
 			for r in GAME_ROWS:
 				rows.append([r[0], r[2][Options.get_value(r[1])]])
+			rows.append(["EXIT", ""])
+		"records":
+			Save._load()
+			rows = [["ARCADE CLEARS", str(Save.data["clears"])], ["ENDINGS SEEN", str(Save.data["endings"].size())], ["SURVIVAL BEST", str(Save.data["survival"])], ["UNLOCK ALL", "ON" if Save.data["unlock_all"] else "OFF"]]
+			for key in Save.data["time_attack"]:
+				var costume := int(key) * 4
+				var f: int = Save.data["time_attack"][key]
+				rows.append([_name(costume), "%02d'%02d\"%02d" % [f / 3600, f / 60 % 60, (f % 60) * 100 / 60]])
 			rows.append(["EXIT", ""])
 		"keys":
 			for p in 2:
@@ -48,6 +57,9 @@ func _rows() -> Array:
 			rows.append(["DEFAULT", ""])
 			rows.append(["EXIT", ""])
 	return rows
+func _name(costume: int) -> String:
+	var exe = font.fonts[0]["exe"]
+	return exe.cstring(exe.u32(exe.u32(0x80097d40 + costume * 4)))
 func _refresh() -> void:
 	var rows := _rows()
 	var first := clampi(selected - WINDOW / 2, 0, maxi(rows.size() - WINDOW, 0))
@@ -101,6 +113,12 @@ func _confirm(rows: Array) -> void:
 	elif label == "GAME OPTION":
 		page = "game"
 		selected = 0
+	elif label == "RECORDS":
+		page = "records"
+		selected = 0
+	elif label == "UNLOCK ALL":
+		Save.data["unlock_all"] = not Save.data["unlock_all"]
+		Save.save()
 	elif label == "KEY CONFIGURATION":
 		page = "keys"
 		selected = 0

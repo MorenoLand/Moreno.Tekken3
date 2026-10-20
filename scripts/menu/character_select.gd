@@ -3,6 +3,8 @@ signal chosen(first: int, second: int)
 const GRID := [[7, 4, 5, 1, 6, 8, 0, 3, 2, 9], [19, 12, 11, 13, 14, 17, 10, 16, 15, 18]]
 const ICONS := [[16, 13, 14, 10, 15, 17, 9, 12, 11, 18], [28, 21, 20, 22, 23, 26, 19, 25, 24, 27]]
 const NAMES_COLUMN := 16
+const Save := preload("res://scripts/core/save.gd")
+var solo := false
 var cursor := [Vector2i(0, 0), Vector2i(0, 0)]
 var locked := [false, false]
 var portrait_nodes: Array = []
@@ -43,7 +45,9 @@ func _ready() -> void:
 		frames.append(sprite(BNS + "009/p%d.tim" % (52 + p), Vector2.ZERO))
 	for r in 2:
 		for c in 10:
-			sprite(BNS + "010/p%02d.tim" % ICONS[r][c], Vector2(11 + 35 * c, 336 + 62 * r))
+			var icon := sprite(BNS + "010/p%02d.tim" % ICONS[r][c], Vector2(11 + 35 * c, 336 + 62 * r))
+			if not Save.unlocked(GRID[r][c]):
+				icon.modulate = Color(0.08, 0.08, 0.1)
 	_refresh()
 func _name_rect(index: int) -> Rect2:
 	return Rect2(0, index * 16, 128, 16) if index < NAMES_COLUMN else Rect2(129, (index - NAMES_COLUMN) * 16, 127, 16)
@@ -69,8 +73,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			cursor[p] = Vector2i((cursor[p].x + step.x + 10) % 10, (cursor[p].y + step.y + 2) % 2)
 			blip(BLIP_CURSOR)
 			_refresh()
-		if event.is_action_pressed("p%d_lk" % (p + 1)):
+		if event.is_action_pressed("p%d_lk" % (p + 1)) and Save.unlocked(GRID[cursor[p].y][cursor[p].x]):
 			locked[p] = true
 			blip(BLIP_CONFIRM)
-	if locked[0] and locked[1]:
+	if locked[0] and (locked[1] or solo):
 		chosen.emit(GRID[cursor[0].y][cursor[0].x], GRID[cursor[1].y][cursor[1].x])

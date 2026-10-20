@@ -5,6 +5,7 @@ const CharacterSelect := preload("res://scripts/menu/character_select.gd")
 const FightView := preload("res://scripts/fight/fight_view.gd")
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
 const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE"]
+const Save := preload("res://scripts/core/save.gd")
 const Exe := preload("res://scripts/core/exe.gd")
 const OptionsScreen := preload("res://scripts/menu/options_screen.gd")
 const ContinueScreen := preload("res://scripts/menu/continue_screen.gd")
@@ -62,6 +63,8 @@ func _mode(item: String) -> void:
 		get_tree().quit()
 	elif item == "THEATER MODE":
 		_theater(0)
+	elif item == "TEKKEN BALL MODE" or item == "TEKKEN FORCE MODE":
+		_summary([item, "NOT AVAILABLE YET"], _title)
 	elif item == "OPTION MODE":
 		var options := OptionsScreen.new()
 		options.done.connect(_title)
@@ -74,6 +77,7 @@ func _mode(item: String) -> void:
 func _select() -> void:
 	music.play_track("select")
 	var select := CharacterSelect.new()
+	select.solo = mode in ["ARCADE MODE", "TIME ATTACK MODE", "SURVIVAL MODE"]
 	select.chosen.connect(_start_fight)
 	_swap(select)
 func _model_for(character: int, variant: int = 0) -> int:
@@ -140,6 +144,29 @@ func _summary(lines: Array, next: Callable) -> void:
 func _clock(count: int) -> String:
 	var seconds := count / 60
 	return "%02d'%02d\"%02d" % [seconds / 60, seconds % 60, (count % 60) * 100 / 60]
+func _finish_run() -> void:
+	var character: int = ROSTER_TO_CHARACTER[picked[0]]
+	var lines := ["CONGRATULATIONS"]
+	if mode == "TIME ATTACK MODE":
+		lines.append("TIME " + _clock(frames))
+		if Save.record_time(character, frames):
+			lines.append("NEW RECORD")
+	var fresh := Save.record_clear(character)
+	for r in fresh:
+		lines.append("NEW CHARACTER")
+		lines.append(_roster_name(r))
+	var after := func(): _summary(lines, _title)
+	if FileAccess.file_exists("res://assets/movies/%02d.ogv" % character):
+		var movie := Movie.new()
+		_swap(movie)
+		movie.play(character)
+		movie.finished.connect(after)
+	else:
+		after.call()
+func _roster_name(roster: int) -> String:
+	if exe == null:
+		exe = Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02"))
+	return exe.cstring(exe.u32(exe.u32(0x80097d40 + ROSTER_TO_CHARACTER[roster] * 16)))
 func _after(winner: int) -> void:
 	var sim = current.sim
 	frames += sim.elapsed
@@ -149,7 +176,7 @@ func _after(winner: int) -> void:
 				ladder += 1
 				_fight(picked[0], _opponent(), false, false)
 			elif winner == 0:
-				_summary(["CONGRATULATIONS", "TIME " + _clock(frames)] if mode == "TIME ATTACK MODE" else ["CONGRATULATIONS"], _title)
+				_finish_run()
 			else:
 				var again := ContinueScreen.new()
 				again.decided.connect(func(go: bool): _fight(picked[0], opponent, false, false) if go else _summary(["GAME OVER"], _title))
@@ -160,7 +187,10 @@ func _after(winner: int) -> void:
 				carry[0] = minf(1.0, sim.fraction(0) + SURVIVAL_RECOVERY)
 				_fight(picked[0], _random_opponent(), false, false, {"rounds": 1, "fractions": carry.duplicate()})
 			else:
-				_summary(["GAME OVER", "%d WINS" % wins], _title)
+				var lines := ["GAME OVER", "%d WINS" % wins]
+				if Save.record_survival(wins):
+					lines.append("NEW RECORD")
+				_summary(lines, _title)
 		"TEAM BATTLE MODE":
 			var loser := 1 - winner if winner >= 0 else 0
 			carry[winner] = maxf(sim.fraction(winner), 0.05)
