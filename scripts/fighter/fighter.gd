@@ -17,11 +17,17 @@ var meshes: Array = []
 var materials := {}
 var tables: Array = []
 var root_matrix: Array = Skeleton.FACING
-func setup(exe, model_bytes: PackedByteArray, character_bytes: PackedByteArray, common_bytes: PackedByteArray, tim_bytes: PackedByteArray) -> void:
+var fighter_id := -1
+var drawn_flags := PackedByteArray()
+func setup(exe, model_bytes: PackedByteArray, character_bytes: PackedByteArray, common_bytes: PackedByteArray, tim_bytes: PackedByteArray, model_id: int = -1) -> void:
+	fighter_id = (model_id - 71) / 4 if model_id >= 71 else -1
 	character = character_bytes
 	common = common_bytes
 	model = model_bytes
 	motion = Motion.new(exe)
+	if fighter_id >= 0:
+		for part in Skeleton.PART_ROWS.size():
+			drawn_flags.append(exe.u8(0x80095dfe + fighter_id * 6 + part) if part > 17 else 1)
 	skeleton = Skeleton.new(exe)
 	var count := model.decode_u32(0)
 	for r in count:
@@ -148,6 +154,8 @@ func _collect_meshes(vram: PackedInt32Array) -> void:
 		var r: int = Skeleton.PART_ROWS[part]
 		if r >= rows.size() - 1:
 			continue
+		if part < drawn_flags.size() and drawn_flags[part] == 0:
+			continue
 		if r != 0 and rows[r][1] != 0 and rows[r - 1][12] != 0:
 			meshes.append(_new_mesh(part, r - 1, r, vram))
 		if part in Skeleton.SECOND_MESH and rows[r + 1][1] != 0 and rows[r][12] != 0:
@@ -213,9 +221,9 @@ func _run(mesh: Dictionary, pose: Array) -> Array:
 			t0[d] = _half(t0[d])
 		d += 1
 	return t0.slice(0, pos)
-func set_frame(frame_index: int) -> void:
+func set_frame(frame_index: int, extra: Dictionary = {}) -> void:
 	var pose: PackedInt32Array = motion.frame(stream_bytes, stream_start, frame_index)
-	var world: Dictionary = skeleton.world(model, pose, root_matrix, [pose[0], pose[1], pose[2]])
+	var world: Dictionary = skeleton.world(model, pose, root_matrix, [pose[0], pose[1], pose[2]], extra)
 	for mesh in meshes:
 		var slot: int = Skeleton.PART_SLOTS[mesh["part"]]
 		var verts := _run(mesh, world[slot])

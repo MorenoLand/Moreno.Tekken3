@@ -129,9 +129,9 @@ func _follow(a: int, p: int, f: int, bt: Array, pivot_world: Array) -> Array:
 	var lift: int = _atan(_const(type, 0x18) * v[1], _const(type, 0x1c) * reach)
 	return [swing * _const(type, 0x20), lift * _const(type, 0x24), flag]
 func _toward_hands(a: int, bt: Array, w: Array) -> Array:
-	var t13 := _read_block(a, 13)[1]
-	var t16 := _read_block(a, 16)[1]
-	var t18 := _read_block(a, FIRST)[1]
+	var t13: Array = _read_block(a, 13)[1]
+	var t16: Array = _read_block(a, 16)[1]
+	var t18: Array = _read_block(a, FIRST)[1]
 	var d := [t16[0] - t13[0], t16[1] - t13[1], t16[2] - t13[2]]
 	var sum: int = d[0] * d[0] + d[1] * d[1] + d[2] * d[2]
 	if sum <= 0x3fff:

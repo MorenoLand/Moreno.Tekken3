@@ -221,7 +221,7 @@ func locals(pose: PackedInt32Array) -> Array:
 		if res[1] is Array:
 			loc[limbs[k][0] + 1] = res[1]
 	return loc
-func world(model: PackedByteArray, pose: PackedInt32Array, root_matrix: Array, root_pos: Array) -> Dictionary:
+func world(model: PackedByteArray, pose: PackedInt32Array, root_matrix: Array, root_pos: Array, extra: Dictionary = {}) -> Dictionary:
 	var info := {}
 	for part in PART_ROWS.size():
 		var r: int = PART_ROWS[part]
@@ -230,6 +230,8 @@ func world(model: PackedByteArray, pose: PackedInt32Array, root_matrix: Array, r
 		var base := 24 + r * 56
 		info[PART_SLOTS[part]] = [model.decode_s32(base + 24), [model.decode_s32(base + 12), model.decode_s32(base + 16), -model.decode_s32(base + 20)]]
 	var loc := locals(pose)
+	for slot in extra:
+		loc[slot] = extra[slot]
 	var result := {}
 	var root := [root_matrix, root_pos]
 	for s in info:

@@ -11,6 +11,7 @@ const SoundEvents := preload("res://scripts/combat/sound_events.gd")
 const Exe := preload("res://scripts/core/exe.gd")
 const Motion := preload("res://scripts/fighter/motion.gd")
 const Skeleton := preload("res://scripts/fighter/skeleton.gd")
+const Secondary := preload("res://scripts/fighter/secondary.gd")
 const Volumes := preload("res://scripts/combat/hit_volumes.gd")
 const Hits := preload("res://scripts/combat/hits.gd")
 const BodyPush := preload("res://scripts/combat/body_push.gd")
@@ -40,16 +41,18 @@ var last_winner := -1
 var computer := [false, true]
 var trace := false
 var skeleton
+var secondary
 var models: Array = []
 const JOINTS := 0x8f4
 const JOINT_SIZE := 0x44
 func actor(p: int) -> int:
 	return ACTORS + p * STRIDE
-func setup(exe: PackedByteArray, common: PackedByteArray, first: PackedByteArray, second: PackedByteArray, first_model: PackedByteArray, second_model: PackedByteArray) -> void:
+func setup(exe: PackedByteArray, common: PackedByteArray, first: PackedByteArray, second: PackedByteArray, first_model: PackedByteArray, second_model: PackedByteArray, model_ids: Array = [-1, -1]) -> void:
 	ram.load_bytes(0x80010000, exe.slice(0x800))
 	motion = Motion.new(Exe.new(exe))
 	skeleton = Skeleton.new(Exe.new(exe))
 	models = [first_model, second_model]
+	secondary = Secondary.new(ram, skeleton)
 	MoveData.place(ram, 2, common)
 	MoveData.place(ram, 0, first)
 	MoveData.place(ram, 1, second)
@@ -72,6 +75,8 @@ func setup(exe: PackedByteArray, common: PackedByteArray, first: PackedByteArray
 		ram.w32(a + 0x3f4, MAX_HEALTH)
 		ram.w32(a + 0x3f8, MAX_HEALTH)
 		Pad.reset(ram, a)
+	for p in 2:
+		secondary.setup(actor(p), (model_ids[p] - 71) / 4 if model_ids[p] >= 71 else -1, models[p])
 	for p in 2:
 		start_actor(p)
 func start_actor(p: int, reset_position: bool = true) -> void:
@@ -190,6 +195,16 @@ func update_joints(p: int) -> void:
 		var t: Array = world[slot][1]
 		for i in 3:
 			ram.w32(at + 0x14 + i * 4, t[i])
+	for idx in Secondary.COUNT:
+		if secondary.active(a, idx):
+			secondary.step(a, idx)
+			secondary.compose(a, idx)
+func secondary_locals(p: int) -> Dictionary:
+	var out := {}
+	for idx in Secondary.COUNT:
+		if secondary.active(actor(p), idx):
+			out[Secondary.FIRST + idx] = secondary.local_matrix(actor(p), idx)
+	return out
 func push_radii(a: int) -> void:
 	var row: int = ram.u32(a + 0x54)
 	var rule: int = ram.u16(row + 0x30)

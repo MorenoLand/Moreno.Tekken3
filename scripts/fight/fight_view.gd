@@ -75,12 +75,12 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 		impact.queue_free()
 	impact = Impact.new()
 	get_child(0).add_child(impact)
-	sim.setup(exe.data, _file(BNS + "279.bin"), _file("%s%03d.bin" % [BNS, ids[0] + 3]), _file("%s%03d.bin" % [BNS, ids[1] + 3]), _file("%s%03d.3dmk" % [BNS, ids[0]]), _file("%s%03d.3dmk" % [BNS, ids[1]]))
+	sim.setup(exe.data, _file(BNS + "279.bin"), _file("%s%03d.bin" % [BNS, ids[0] + 3]), _file("%s%03d.bin" % [BNS, ids[1] + 3]), _file("%s%03d.3dmk" % [BNS, ids[0]]), _file("%s%03d.3dmk" % [BNS, ids[1]]), ids)
 	for i in ids.size():
 		var f = Fighter.new()
 		get_child(0).add_child(f)
 		var id: int = ids[i]
-		f.setup(exe, _file("%s%03d.3dmk" % [BNS, id]), _file("%s%03d.bin" % [BNS, id + 3]), _file(BNS + "279.bin"), _file("%s%03d/00.tim" % [BNS, id + 2]))
+		f.setup(exe, _file("%s%03d.3dmk" % [BNS, id]), _file("%s%03d.bin" % [BNS, id + 3]), _file(BNS + "279.bin"), _file("%s%03d/00.tim" % [BNS, id + 2]), id)
 		fighters.append(f)
 	sim.match_over.connect(func(w): finished.emit(w))
 	sim.computer = [false, not versus]
@@ -271,7 +271,7 @@ func _present() -> void:
 		f.stream_bytes = streams[ptr]
 		f.stream_start = 0
 		f.frames = ram.u8(row + 0x18)
-		f.set_frame(clampi(ram.s16(a + 0x58) - 1, 0, maxi(f.frames - 1, 0)))
+		f.set_frame(clampi(ram.s16(a + 0x58) - 1, 0, maxi(f.frames - 1, 0)), sim.secondary_locals(p))
 		f.position = Vector3(ram.s32(a), -ram.s32(a + 4), -ram.s32(a + 8)) * 0.001
 		f.rotation.y = 3.0 * PI / 2.0 - ram.u16(a + 0x2c) * TAU / 65536.0
 	_follow()
