@@ -144,8 +144,10 @@ func _read_stream(start: int) -> Dictionary:
 	s["half"] = _two_list(o)
 	return s
 func _collect_meshes(vram: PackedInt32Array) -> void:
-	for part in 18:
+	for part in Skeleton.PART_ROWS.size():
 		var r: int = Skeleton.PART_ROWS[part]
+		if r >= rows.size() - 1:
+			continue
 		if r != 0 and rows[r][1] != 0 and rows[r - 1][12] != 0:
 			meshes.append(_new_mesh(part, r - 1, r, vram))
 		if part in Skeleton.SECOND_MESH and rows[r + 1][1] != 0 and rows[r][12] != 0:

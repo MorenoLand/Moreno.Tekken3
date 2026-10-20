@@ -223,14 +223,16 @@ func locals(pose: PackedInt32Array) -> Array:
 	return loc
 func world(model: PackedByteArray, pose: PackedInt32Array, root_matrix: Array, root_pos: Array) -> Dictionary:
 	var info := {}
-	for part in 18:
+	for part in PART_ROWS.size():
 		var r: int = PART_ROWS[part]
+		if r >= model.decode_u32(0):
+			continue
 		var base := 24 + r * 56
 		info[PART_SLOTS[part]] = [model.decode_s32(base + 24), [model.decode_s32(base + 12), model.decode_s32(base + 16), -model.decode_s32(base + 20)]]
 	var loc := locals(pose)
 	var result := {}
 	var root := [root_matrix, root_pos]
-	for s in 18:
+	for s in info:
 		_solve(s, info, loc, result, root)
 	return result
 func _solve(slot: int, info: Dictionary, loc: Array, result: Dictionary, root: Array) -> Array:
@@ -238,7 +240,7 @@ func _solve(slot: int, info: Dictionary, loc: Array, result: Dictionary, root: A
 		return result[slot]
 	var parent_part: int = info[slot][0]
 	var parent: Array = root if parent_part < 0 else _solve(PART_SLOTS[parent_part], info, loc, result, root)
-	var m: Array = loc[slot]
+	var m: Array = loc[slot] if slot < loc.size() else IDENTITY
 	var blank := true
 	for v in m:
 		if v != 0:
