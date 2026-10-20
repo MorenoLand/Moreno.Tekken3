@@ -33,9 +33,8 @@ func _enter_tree() -> void:
 	resized.connect(_layout)
 	_layout()
 func _layout() -> void:
-	var k := size.y / 480.0
-	screen.scale = Vector2(k * PIXEL_ASPECT, k)
-	screen.position = Vector2((size.x - 368.0 * k * PIXEL_ASPECT) / 2.0, 0.0)
+	screen.scale = Vector2(size.x / 368.0, size.y / 480.0)
+	screen.position = Vector2.ZERO
 func tim_texture(path: String, gain: float = 1.0, bands: int = 0) -> ImageTexture:
 	var key := "%s@%s@%d" % [path, gain, bands]
 	if not cache.has(key):
