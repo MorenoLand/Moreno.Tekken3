@@ -2,15 +2,12 @@ import argparse
 import json
 import sys
 from pathlib import Path
-
 sys.path.insert(0, str(Path(__file__).parent))
 import disc
 import formats
 import audio
-
+import models
 BNS = "TEKKEN3/TEKKEN3.BNS"
-
-
 def find_disc(arg):
     if arg:
         return arg
@@ -18,16 +15,12 @@ def find_disc(arg):
         for p in base.glob("*.cue"):
             return str(p)
     raise SystemExit("no disc: pass a .cue path")
-
-
 def write(path, data, overwrite):
     if path.exists() and not overwrite:
         return False
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
     return True
-
-
 def extract_records(d, out, overwrite):
     table = disc.bns_table(d)
     index = []
@@ -54,8 +47,6 @@ def extract_records(d, out, overwrite):
         index.append(entry)
     write(out / "bns" / "index.json", json.dumps(index, indent=1).encode(), True)
     return index
-
-
 def extract_textures(out, overwrite):
     n = 0
     for p in sorted((out / "bns").rglob("*.tim")):
@@ -73,8 +64,6 @@ def extract_textures(out, overwrite):
         except Exception as e:
             print("skip", p, e)
     return n
-
-
 def extract_audio(d, cue, out, overwrite):
     n = 0
     table = disc.bns_table(d)
@@ -99,6 +88,15 @@ def extract_audio(d, cue, out, overwrite):
             if write(out / "audio" / "cdda" / ("track%02d.wav" % t["number"]), audio.wav_bytes(audio.cdda_pcm(t), 44100, 2), overwrite):
                 n += 1
     return n
+def extract_models(out, overwrite):
+    n = 0
+    for p in sorted((out / "bns").glob("*.3dmk")):
+        parts = []
+        for m in models.rest_pose(p.read_bytes()):
+            tris = [[f[0], f[i], f[i + 1]] for f in m["faces"] for i in range(1, len(f) - 1)]
+            parts.append({"row": m["row"], "parent": m["parent"], "pivot": m["pivot"], "verts": [list(v) for v in m["verts"]], "tris": tris})
+        n += write(out / "models" / (p.stem + ".json"), json.dumps(parts, separators=(",", ":")).encode(), overwrite)
+    return n
 
 
 def main():
@@ -108,21 +106,21 @@ def main():
     ap.add_argument("--records", action="store_true")
     ap.add_argument("--textures", action="store_true")
     ap.add_argument("--audio", action="store_true")
+    ap.add_argument("--models", action="store_true")
     ap.add_argument("--overwrite", action="store_true")
     a = ap.parse_args()
     out = Path(a.output)
     out.mkdir(parents=True, exist_ok=True)
     (out / ".gdignore").touch()
-    everything = not (a.records or a.textures or a.audio)
+    everything = not (a.records or a.textures or a.audio or a.models)
     if everything or a.records:
         d = disc.Disc(find_disc(a.disc))
         print("records:", len(extract_records(d, out, a.overwrite)))
     if everything or a.textures:
         print("textures:", extract_textures(out, a.overwrite))
+    if everything or a.models:
+        print("models:", extract_models(out, a.overwrite))
     if everything or a.audio:
         cue = find_disc(a.disc)
         print("audio files:", extract_audio(disc.Disc(cue), cue, out, a.overwrite))
-
-
 main()
-

@@ -1,11 +1,8 @@
 import re
 import struct
 from pathlib import Path
-
 PRED = ((0, 0), (60, 0), (115, -52), (98, -55), (122, -60))
 SECTOR = 2352
-
-
 def adpcm_decode(data):
     h1 = h2 = 0
     out = bytearray()
@@ -25,12 +22,8 @@ def adpcm_decode(data):
         if data[o + 1] & 1:
             break
     return bytes(out)
-
-
 def wav_bytes(pcm, rate, channels):
     return b"RIFF" + struct.pack("<I", 36 + len(pcm)) + b"WAVEfmt " + struct.pack("<IHHIIHH", 16, 1, channels, rate, rate * channels * 2, channels * 2, 16) + b"data" + struct.pack("<I", len(pcm)) + pcm
-
-
 def vab_samples(vh, vb):
     ps, ts, vs = struct.unpack_from("<HHH", vh, 18)
     table = 32 + 2048 + ps * 16 * 32
@@ -44,8 +37,6 @@ def vab_samples(vh, vb):
             out.append((i, vb[pos:pos + sizes[i]]))
         pos += sizes[i]
     return out
-
-
 def cue_tracks(cue):
     cue = Path(cue)
     tracks = []
@@ -61,8 +52,6 @@ def cue_tracks(cue):
         if m and tracks:
             tracks[-1]["start"] = (int(m.group(1)) * 60 + int(m.group(2))) * 75 + int(m.group(3))
     return tracks
-
-
 def cdda_pcm(track):
     raw = Path(track["file"]).read_bytes()
     return raw[track["start"] * SECTOR:]

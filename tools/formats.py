@@ -1,7 +1,5 @@
 import struct
 import zlib
-
-
 def parse_arc(b):
     if len(b) < 4:
         return None
@@ -17,12 +15,8 @@ def parse_arc(b):
             return None
         pos += s
     return members if pos == len(b) else None
-
-
 def is_tim(b):
     return len(b) >= 20 and b[:4] == b"\x10\x00\x00\x00" and b[4] in (0, 1, 2, 3, 8, 9, 10, 11) and b[5:8] == b"\0\0\0"
-
-
 def parse_tim(b):
     flags = struct.unpack_from("<I", b, 4)[0]
     mode = flags & 3
@@ -38,14 +32,10 @@ def parse_tim(b):
     raw = b[o + 12:o + size]
     width = iw * (4, 2, 1, 2 / 3)[mode]
     return {"mode": mode, "x": ix, "y": iy, "width": int(width), "height": ih, "raw": raw, "cluts": cluts, "words": iw}
-
-
 def rgba(c):
     r, g, b = (c & 31) * 255 // 31, (c >> 5 & 31) * 255 // 31, (c >> 10 & 31) * 255 // 31
     a = 0 if c == 0 else 255
     return bytes((r, g, b, a))
-
-
 def tim_pixels(t, row=0):
     w, h, raw, mode = t["width"], t["height"], t["raw"], t["mode"]
     out = bytearray()
@@ -69,15 +59,11 @@ def tim_pixels(t, row=0):
         for i in range(w * h):
             out += bytes((raw[i * 3], raw[i * 3 + 1], raw[i * 3 + 2], 255))
     return bytes(out)
-
-
 def write_png(path, w, h, rgba_bytes):
     rows = b"".join(b"\0" + rgba_bytes[y * w * 4:(y + 1) * w * 4] for y in range(h))
-
     def chunk(tag, data):
         c = struct.pack(">I", len(data)) + tag + data
         return c + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
-
     png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(rows, 6)) + chunk(b"IEND", b"")
     with open(path, "wb") as f:
         f.write(png)
