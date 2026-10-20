@@ -94,6 +94,12 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 	hud.stage = options.get("stage", 0)
 	hud.base = options.get("base", 0)
 	hud.bind(sim, roster)
+	if options.get("demo", false):
+		hud.start_demo()
+		cpus = [_cpu(), _cpu()]
+		sim.computer = [true, true]
+		for p in 2:
+			sim.ram.w8(sim.actor(p) + 0xc5, 1)
 	_present()
 func _cpu():
 	var cpu := Cpu.new()

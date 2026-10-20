@@ -6,6 +6,7 @@ const FightView := preload("res://scripts/fight/fight_view.gd")
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
 const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE"]
 const Save := preload("res://scripts/core/save.gd")
+const NamcoScreen := preload("res://scripts/menu/namco_screen.gd")
 const Exe := preload("res://scripts/core/exe.gd")
 const OptionsScreen := preload("res://scripts/menu/options_screen.gd")
 const ContinueScreen := preload("res://scripts/menu/continue_screen.gd")
@@ -46,6 +47,10 @@ func _swap(next: Control) -> void:
 	current = next
 	holder.add_child(next)
 func _intro() -> void:
+	var namco := NamcoScreen.new()
+	_swap(namco)
+	namco.finished.connect(_movie)
+func _movie() -> void:
 	if not FileAccess.file_exists("res://assets/movies/20.ogv"):
 		_title()
 		return
@@ -54,10 +59,24 @@ func _intro() -> void:
 	movie.play(20)
 	movie.finished.connect(_title)
 func _title() -> void:
+	if mode == "ATTRACT":
+		mode = ""
 	music.play_track("title")
 	var title := Title.new()
 	title.chosen.connect(_mode)
+	title.entered.connect(func(): music.play_song(0))
+	title.idle.connect(_attract)
 	_swap(title)
+func _attract() -> void:
+	var first := randi() % 20
+	var second := randi() % 20
+	mode = "ATTRACT"
+	var home := _home(second)
+	music.play_track("title")
+	var view := FightView.new()
+	_swap(view)
+	view.finished.connect(func(_w): _title())
+	view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second])], home["stage"] % 15, [first, second], true, false, {"demo": true})
 func _mode(item: String) -> void:
 	if item == "QUIT GAME":
 		get_tree().quit()
@@ -220,6 +239,10 @@ func _fight(first: int, second: int, versus: bool = false, practice: bool = fals
 	var variant := 1 if mode in ["ARCADE MODE", "TIME ATTACK MODE"] and ladder == LADDER and second == 20 else 0
 	view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second], variant)], home["stage"] % 15, [first, second], versus, practice, options)
 func _unhandled_input(event: InputEvent) -> void:
+	if mode == "ATTRACT" and current is FightView and event.is_pressed() and not event.is_echo() and (event is InputEventKey or event is InputEventJoypadButton):
+		mode = ""
+		_title()
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F2:
 		widescreen = not widescreen
 		_aspect()

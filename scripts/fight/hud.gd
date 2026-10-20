@@ -21,6 +21,8 @@ var labels: Array = []
 var banners: Array = [TextureRect.new(), TextureRect.new(), TextureRect.new()]
 var stage_label := TextureRect.new()
 var clock_label := TextureRect.new()
+var demo := false
+var demo_labels: Array = []
 var stage := 0
 var base := 0
 var last_clock := -1
@@ -98,6 +100,8 @@ func _digit(n: int) -> AtlasTexture:
 	atlas.region = Rect2(n * 16, 0, 16, 46)
 	return atlas
 func say(text: String, slot: int = 1) -> void:
+	if demo and slot == 2:
+		return
 	var label: TextureRect = banners[slot]
 	if text == "":
 		label.texture = null
@@ -109,6 +113,22 @@ func say(text: String, slot: int = 1) -> void:
 	label.texture = tex
 	label.size = tex.get_size()
 	label.position = Vector2(184 - tex.get_width() / 2, [112, 228, 368][slot])
+func start_demo() -> void:
+	demo = true
+	for i in 2:
+		var tex: ImageTexture = font.texture("PUSH P%d START" % (i + 1), 0)
+		var label := TextureRect.new()
+		label.texture = tex
+		label.size = tex.get_size()
+		label.modulate = Color(1.0, 0.8, 0.1)
+		label.position = Vector2(30 if i == 0 else 226, 22)
+		screen.add_child(label)
+		demo_labels.append(label)
+	var over: ImageTexture = font.texture("GAME OVER", 2)
+	banners[2].texture = over
+	banners[2].size = over.get_size()
+	banners[2].modulate = Color(0.9, 0.1, 0.12)
+	banners[2].position = Vector2(184 - over.get_width() / 2.0, 270)
 func _clock(count: int) -> void:
 	if count == last_clock:
 		return
