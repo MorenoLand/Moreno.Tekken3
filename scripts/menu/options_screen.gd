@@ -33,6 +33,7 @@ var capture_index := 0
 var layer := Control.new()
 var pulse := 0.0
 var lit: ColorRect
+var prompt := ""
 func controls():
 	return get_node("/root/Controls")
 func _ready() -> void:
@@ -118,6 +119,10 @@ func _refresh() -> void:
 			_draw_keys()
 		"records":
 			_draw_records()
+		"display":
+			_draw_display()
+		"card":
+			_draw_card()
 func _row(label: String, value: String, y: float, on: bool, width: float, value_clut: int = 0x7e11) -> void:
 	if on:
 		lit = _block(Vector2(17, y - 3), Vector2(width, 22), Color8(0x1f, 0x3e, 0xf7))
@@ -137,6 +142,58 @@ func _draw_game() -> void:
 	for i in GAME_ROWS.size():
 		_row(GAME_ROWS[i][0], GAME_ROWS[i][2][Options.get_value(GAME_ROWS[i][1])], 170 + i * 27, i == selected, 330)
 	_row("EXIT", "", 170 + GAME_ROWS.size() * 27, selected == GAME_ROWS.size(), 330)
+func _pad_icons(at: Vector2) -> void:
+	var x := at.x
+	_block(Vector2(x + 1, at.y + 3), Vector2(9, 9), Color8(0xe0, 0x90, 0xd0))
+	_block(Vector2(x + 3, at.y + 5), Vector2(5, 5), Color8(0x10, 0x10, 0x60))
+	var triangle := Polygon2D.new()
+	triangle.polygon = PackedVector2Array([Vector2(x + 24, at.y + 2), Vector2(x + 30, at.y + 13), Vector2(x + 18, at.y + 13)])
+	triangle.color = Color8(0x40, 0xd0, 0x80)
+	layer.add_child(triangle)
+	var cross := Polygon2D.new()
+	cross.polygon = PackedVector2Array([Vector2(x + 38, at.y + 2), Vector2(x + 41, at.y + 2), Vector2(x + 44, at.y + 6), Vector2(x + 47, at.y + 2), Vector2(x + 50, at.y + 2), Vector2(x + 46, at.y + 8), Vector2(x + 50, at.y + 14), Vector2(x + 47, at.y + 14), Vector2(x + 44, at.y + 10), Vector2(x + 41, at.y + 14), Vector2(x + 38, at.y + 14), Vector2(x + 42, at.y + 8)])
+	cross.color = Color8(0x50, 0x80, 0xe8)
+	layer.add_child(cross)
+	var ring := Polygon2D.new()
+	var points := PackedVector2Array()
+	for k in 16:
+		points.append(Vector2(x + 72 + cos(k * TAU / 16.0) * 6.0, at.y + 8 + sin(k * TAU / 16.0) * 6.0))
+	ring.polygon = points
+	ring.color = Color8(0xe0, 0x50, 0x40)
+	layer.add_child(ring)
+func _cancel_line(y: float) -> void:
+	_text("CANCEL", 0, 0x7e15, Vector2(36, y))
+	_text(": PUSH", 0, 0x7e16, Vector2(90, y))
+	_pad_icons(Vector2(150, y))
+	_text("OR", 0, 0x7e16, Vector2(240, y))
+func _draw_display() -> void:
+	_title("DISPLAY ADJUST", 92.0)
+	layer.position = Vector2(Options.get_value("shift_x"), Options.get_value("shift_y"))
+	for edge in [Rect2(138, 30, 92, 3), Rect2(138, 243, 92, 3), Rect2(138, 455, 92, 3), Rect2(183, 164, 2, 160), Rect2(6, 164, 2, 160), Rect2(360, 164, 2, 160)]:
+		_block(edge.position, edge.size, Color8(0xe0, 0xe0, 0xe0))
+	_text("DEFAULT", 0, 0x7e12, Vector2(36, 378))
+	_text(": PUSH START", 0, 0x7e16, Vector2(36 + 63, 378))
+	_text("EXIT", 0, 0x7e15, Vector2(62, 412))
+	_text(": PUSH", 0, 0x7e16, Vector2(62 + 36, 412))
+	_text("OR", 0, 0x7e16, Vector2(62 + 36 + 54 + 90, 412))
+	_pad_icons(Vector2(62 + 36 + 54, 412))
+func _draw_card() -> void:
+	_title("MEMORY CARD", -1.0)
+	layer.position = Vector2.ZERO
+	var rows := ["CARD SAVE", "CARD LOAD", "AUTO SAVE", "EXIT"]
+	for i in rows.size():
+		var y := 100 + i * 40
+		if i == 2:
+			if selected == 2:
+				lit = _block(Vector2(17, y - 3), Vector2(rows[i].length() * 9 + 6, 22), Color8(0x1f, 0x3e, 0xf7))
+			_text(rows[i], 0, 0x7e15 if selected == 2 else 0x7e1a, Vector2(20, y))
+			_text("YES" if Options.get_value("autosave") == 1 else "NO", 0, 0x7e11, Vector2(120, y))
+		else:
+			_row(rows[i], "", y, i == selected, rows[i].length() * 9 + 6)
+	if prompt != "":
+		_text(prompt, 0, 0x7e12, Vector2(36, 386))
+		_text(": PUSH START", 0, 0x7e16, Vector2(36 + prompt.length() * 9 + 9, 386))
+		_cancel_line(420)
 func _draw_sounds() -> void:
 	_title("SOUNDS", -1.0)
 	_row("MUSIC VOLUME", str(Options.get_value("music")), 145, selected == 0, 330, 0x7e16)
@@ -227,6 +284,8 @@ func _count() -> int:
 			return 4
 		"keys":
 			return 8
+		"card":
+			return 4
 	return 1
 func _unhandled_input(event: InputEvent) -> void:
 	if capturing:
@@ -245,6 +304,41 @@ func _unhandled_input(event: InputEvent) -> void:
 	var left: bool = event.is_action_pressed("menu_left")
 	var right: bool = event.is_action_pressed("menu_right")
 	var confirm: bool = event.is_action_pressed("menu_confirm") or event.is_action_pressed("menu_start")
+	if page == "display":
+		var shift := Vector2i(Options.get_value("shift_x"), Options.get_value("shift_y"))
+		if left or right or up or down:
+			shift += Vector2i((1 if right else 0) - (1 if left else 0), (1 if down else 0) - (1 if up else 0)) * 2
+			Options.set_value("shift_x", clampi(shift.x, -16, 16))
+			Options.set_value("shift_y", clampi(shift.y, -16, 16))
+			blip(BLIP_CURSOR)
+			_refresh()
+		elif event.is_action_pressed("menu_start"):
+			Options.set_value("shift_x", 0)
+			Options.set_value("shift_y", 0)
+			blip(BLIP_CONFIRM)
+			_refresh()
+		elif event.is_action_pressed("menu_back") or event.is_action_pressed("menu_confirm"):
+			layer.position = Vector2.ZERO
+			page = "top"
+			selected = 4
+			blip(BLIP_CONFIRM)
+			_refresh()
+		return
+	if page == "card" and prompt != "":
+		if event.is_action_pressed("menu_start"):
+			if prompt == "SAVE":
+				Save.save()
+				Options.save()
+			else:
+				Save.loaded = false
+				Save._load()
+			blip(BLIP_CONFIRM)
+			prompt = ""
+			_refresh()
+		elif event.is_action_pressed("menu_back") or event.is_action_pressed("menu_confirm"):
+			prompt = ""
+			_refresh()
+		return
 	if page == "records":
 		if confirm or event.is_action_pressed("menu_back"):
 			page = "top"
@@ -288,6 +382,10 @@ func _confirm() -> void:
 					page = "keys"
 				"RECORDS":
 					page = "records"
+				"DISPLAY ADJUST":
+					page = "display"
+				"MEMORY CARD":
+					page = "card"
 				"EXIT":
 					done.emit()
 					return
@@ -302,6 +400,19 @@ func _confirm() -> void:
 			if selected >= 2:
 				_leave()
 				return
+		"card":
+			match selected:
+				0:
+					prompt = "SAVE"
+				1:
+					prompt = "LOAD"
+				2:
+					Options.set_value("autosave", 1 - Options.get_value("autosave"))
+				3:
+					_leave()
+					return
+			_refresh()
+			return
 		"keys":
 			match selected % 4:
 				0:
@@ -320,6 +431,6 @@ func _leave() -> void:
 	if page == "top":
 		done.emit()
 		return
-	selected = TOP.find({"game": "GAME OPTION", "sounds": "SOUNDS", "keys": "KEY CONFIGURATION", "records": "RECORDS"}.get(page, "EXIT"))
+	selected = TOP.find({"game": "GAME OPTION", "sounds": "SOUNDS", "keys": "KEY CONFIGURATION", "records": "RECORDS", "display": "DISPLAY ADJUST", "card": "MEMORY CARD"}.get(page, "EXIT"))
 	page = "top"
 	_refresh()
