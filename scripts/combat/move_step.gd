@@ -535,7 +535,10 @@ static func apply_kind(ram, a: int, b: int, copy: int) -> void:
 			ram.w16(a + 0x0e, ram.s16(a + 0x2c))
 			ram.w32(a + 0x4c, nx)
 		_:
-			if not apply_reaction(ram, a, b, copy):
+			var handled: int = apply_reaction(ram, a, b, copy)
+			if handled == 2:
+				skip_copy = true
+			elif handled == 0:
 				ram.w16(a + 0x58, 1)
 				ram.w16(a + 0x50, 1)
 				ram.w32(a + 0x4c, nx)
@@ -543,8 +546,248 @@ static func apply_kind(ram, a: int, b: int, copy: int) -> void:
 				ram.w16(a + 0x2c, ram.s16(a + 0x2a))
 	if not skip_copy and copy != 0:
 		copy_position(ram, a)
-static func apply_reaction(ram, a: int, b: int, copy: int) -> bool:
-	return false
+static func juggle_counter(ram, a: int) -> void:
+	var kind: int = ram.u16(a + 0x19a)
+	if ((kind - 0x27) & 0xffff) < 2 or kind == 0x2b:
+		if ram.s16(a + 0x126) == 0:
+			ram.w16(a + 0x124, 0)
+		elif ram.u16(a + 0x13a) == kind:
+			ram.w16(a + 0x124, ram.s16(a + 0x124) + 1)
+		ram.w16(a + 0x13a, ram.u16(a + 0x19a))
+		ram.w16(a + 0x126, ram.u8(ram.u32(a + 0x1a4) + 0x18) + 10)
+static func rise_physics(ram, a: int) -> void:
+	ram.w16(a + 0x198, 1)
+	var hold: int = ram.u8(ram.u32(a + 0x1a4) + 0x1b)
+	if hold == 0:
+		hold = ram.u8(ram.u32(a + 0x54) + 0x18)
+	var height: int = ram.s32(a + 0xf6c)
+	var drop: int = ram.s16(a + 0x96)
+	var power: int = ram.s16(a + 0xe8) + (ram.s16(a + 0x94) + 1) * 7 + 10
+	if ram.s16(a + 0x90) == 5:
+		power += 10
+	ram.w16(a + 0x98, 100 if power > 100 else (0 if power < 0 else power))
+	var lift: int = (ram.s16(a + 0xe8) * 4 - ((ram.s32(a + 0x3c8) + ram.s32(a + 0x3e0)) >> 3)) - (ram.s16(a + 0x94) * 7 - 0x28)
+	var v: int = mini(lift, 100)
+	var sq: int = v * v
+	if lift < -100:
+		v = -100
+		sq = 10000
+	ram.w16(a + 0x9c, -v)
+	sq += (drop + height) * 0xc
+	if sq < 0:
+		sq = -sq
+	var root: int = FMath.isqrt(sq)
+	var u: int = ((v + root) & 0xffffffff) / 6
+	var neg: int = -u
+	if u == 0:
+		u = 1
+		neg = -1
+	var rest: int = hold + neg + 1
+	if rest < 1:
+		rest = 1
+	var start: int
+	if (ram.u32(a + 0x60) & 4) == 0 and rest != 1:
+		u = (u - 1) + rest
+		start = 1
+	elif ram.s16(a + 0x94) == 0:
+		u += 10
+		start = hold - u + 1
+		if start < 1:
+			start = 1
+	else:
+		start = rest
+		if ram.u32(ram.u32(a + 0x54)) == ram.u32(ram.u32(a + 0x1a4)):
+			var diff: int = ram.s16(a + 0x58) - rest
+			if diff < 0:
+				diff = rest - ram.s16(a + 0x58)
+			if diff < 10:
+				start = ram.s16(a + 0x58) - 10
+				var back: int = -start
+				if start < 1:
+					start = 1
+					back = -1
+				u = u + rest + back
+	var steps: int = u + 1
+	var area: int = steps * steps * 6 >> 1
+	if (v * steps - area) - height < drop:
+		ram.w16(a + 0x9c, -FMath.tdiv(drop + height + area, steps))
+	ram.w32(a + 0x110, 0x80019d2c)
+	ram.w16(a + 0x10a, 8)
+	ram.w16(a + 0x198, start)
+	ram.w16(a + 0x10c, ram.s16(a + 0x2a) - 0x8000)
+	if ram.s16(a + 0x90) == 1:
+		ram.w16(a + 0x9c, 400)
+		ram.w16(a + 0x198, 6)
+		var n: int = ram.u8(ram.u32(a + 0x1a4) + 0x18) - 6
+		ram.w16(a + 0x106, n)
+		if n < 0:
+			ram.w16(a + 0x106, 0)
+		ram.w16(a + 0x108, 0x28)
+		ram.w16(a + 0x10c, ram.s16(a + 0x2a) - 0x8000)
+	ram.w32(0x80095770 + ram.u8(a + 0x1e) * 4, steps)
+static func stun_blend(ram, a: int, row: int) -> void:
+	var v := 0
+	if (ram.u32(row + 0x24) >> 8 & 0x10) == 0:
+		var h: int = ram.s16(a + 0x118)
+		v = ram.s16(a + 0xe8) + ((h - (h >> 31)) >> 1)
+	if v > 0x41:
+		v = 0x42
+	ram.w16(a + 0x118, v)
+	ram.w16(a + 0x11a, ram.u8(ram.u32(a + 0x1a4) + 0x18))
+static func slide_setup(ram, a: int, id: int) -> void:
+	var o: int = id * 2
+	ram.w16(a + 0x106, ram.s16(REACTION_IDS_A + o))
+	ram.w16(a + 0x108, ram.s16(REACTION_IDS_B + o))
+	ram.w32(a + 0x110, REACTION_IDS_B + o + 2)
+	ram.w16(a + 0x10a, 8)
+static func apply_reaction(ram, a: int, b: int, copy: int) -> int:
+	var nx: int = ram.u32(a + 0x1a4)
+	var row: int = ram.u32(a + 0x54)
+	var kind: int = ram.u16(a + 0x19a)
+	var table: int = ram.u32(a + 0x1a8)
+	match kind:
+		0x1e, 0x24:
+			if kind == 0x1e:
+				ram.w16(a + 0x90, 5)
+				ram.w16(a + 0x1a0, ram.s16(RISE_TABLE + 2 + 5 * 4))
+				ram.w16(a + 0x8e, 1)
+				ram.w16(a + 0x96, ram.s16(RISE_TABLE + 5 * 4))
+			elif ram.s16(a + 0x94) == 0:
+				ram.w16(a + 0x9a, 0)
+				ram.w16(a + 0x9c, 0)
+				ram.w16(a + 0x9e, 0)
+			ram.w32(a + 4, ram.u32(a + 0xf6c))
+			rise_physics(ram, a)
+			ram.w16(a + 0x58, ram.s16(a + 0x198))
+			ram.w16(a + 0x50, ram.s16(a + 0x198))
+			ram.w8(a + 0xb8, 1)
+			ram.w16(a + 0x92, 1)
+			ram.w16(a + 0x74, 0)
+			ram.w32(a + 0x4c, nx)
+			ram.w16(a + 0x94, ram.s16(a + 0x94) + 1)
+			stun_blend(ram, a, row)
+			ram.w8(a + 0xb9, 0xb)
+			if (ram.u32(row + 0x24) >> 8 & 0x10) == 0:
+				ram.w16(a + 0x0e, ram.s16(a + 0x34))
+			else:
+				ram.w16(a + 0x0e, ram.s16(a + 0x34) + ram.s16(table + 0x1c))
+			ram.w16(a + 0x114, 0)
+			ram.w16(a + 0x116, 0)
+			return 1
+		0x21:
+			ram.w16(a + 0x58, 1)
+			ram.w16(a + 0x50, 1)
+			ram.w32(a + 0x4c, nx)
+			if ram.s16(a + 0x74) == 0:
+				var s5: int = ram.s16(a + 0x2a)
+				var q: int = ram.s16(a + 0x40)
+				ram.w16(a + 0x2c, s5 - 0x8000)
+				if q == 1:
+					ram.w16(a + 0x2c, s5 - 0x4000)
+				elif q == 2:
+					ram.w16(a + 0x2c, s5)
+				elif q == 3:
+					ram.w16(a + 0x2c, s5 + 0x4000)
+				ram.w16(a + 0x114, 0x10)
+				ram.w16(a + 0x0e, ram.u16(a + 0x2c))
+				ram.w16(a + 0x116, FMath.tdiv(FMath.s16(ram.u16(b + 0x2c) - ram.u16(a + 0x2c)), 0x10))
+				ram.w32(a, ram.u32(b + 0xf68))
+				ram.w32(a + 8, ram.u32(b + 0xf70))
+			elif ram.s16(a + 0x74) < 0 or (ram.u32(nx + 0x24) >> 8 & 0x800) != 0:
+				ram.w16(a + 0x2c, ram.u16(b + 0x0e))
+				ram.w16(a + 0x0e, ram.u16(b + 0x0e))
+				ram.w32(a, ram.u32(b + 0xf68))
+				ram.w32(a + 8, ram.u32(b + 0xf70))
+			ram.w16(a + 0x106, 0)
+			ram.w16(a + 0x108, 0)
+			ram.w16(a + 0x10a, 0)
+			ram.w16(a + 0x74, 1 if ram.s16(a + 0x74) < 0 else ram.s16(a + 0x74) + 1)
+			return 2
+		0x22:
+			if ram.s16(a + 0x74) >= 0:
+				if (ram.s16(row + 0x14) == 0 or ram.u8(row + 0x2d) <= ram.s16(a + 0x58)) and ram.s16(b + 0x122) == 0:
+					ram.w8(a + 0xbd, 0)
+				else:
+					ram.w8(a + 0xbd, 1)
+			ram.w16(a + 0x58, 1)
+			ram.w16(a + 0x50, 1)
+			ram.w8(a + 0x86, 1)
+			ram.w32(a + 0x4c, nx)
+			if ram.s16(a + 0x74) < 0:
+				if (ram.u32(nx + 0x24) >> 8 & 0x800) != 0:
+					ram.w16(a + 0x0e, ram.s16(a + 0x2c))
+					copy_position(ram, a)
+			else:
+				var f: int = ram.s16(a + 0x2c)
+				ram.w16(a + 0x2c, f - 0x8000)
+				ram.w16(a + 0x0e, f - 0x8000)
+				copy_position(ram, a)
+				ram.w16(a + 0x70, 0xffff)
+				ram.w16(a + 0x72, 0)
+				ram.w16(a + 0x11e, 0)
+				ram.w16(a + 0x120, 0)
+			ram.w16(a + 0x74, -1 if ram.s16(a + 0x74) >= 1 else ram.s16(a + 0x74) - 1)
+			var br: int = ram.u32(b + 0x1a4)
+			if ram.u8(br + 0x1b) == 0:
+				var d: int = ram.u8(br + 0x18) - ram.u8(nx + 0x18)
+				var v: int = ram.u8(br + 0x18) if d < 1 else ram.u8(nx + 0x18) + d
+				v = FMath.s16(v)
+				ram.w16(a + 0x11a, 0 if v < 0 else mini(v, 300))
+			else:
+				ram.w16(a + 0x11a, ram.u8(br + 0x1b) + ram.u8(nx + 0x18))
+			var sv: int = FMath.tdiv(ram.s16(ram.u32(b + 0x1a4) + 0x14) * 0x20, 0x2d) + 0x22
+			ram.w16(a + 0x118, 0x42 if FMath.s16(sv) > 0x41 else sv)
+			if ram.s16(a + 0x118) < 0x23:
+				ram.w16(a + 0x118, 0x22)
+			ram.w16(a + 0x106, 0)
+			ram.w16(a + 0x108, 0)
+			ram.w16(a + 0x10a, 0)
+			return 2
+		0x23, 0x26:
+			if kind == 0x26:
+				stun_blend(ram, a, row)
+			slide_setup(ram, a, ram.s16(table + (0x28 if kind == 0x23 else 0x22)))
+			ram.w16(a + 0x58, 1)
+			ram.w16(a + 0x50, 1)
+			ram.w16(a + 0x74, 0)
+			ram.w32(a + 0x4c, nx)
+			ram.w16(a + 0x10c, ram.s16(a + 0x2a) + ram.s16(table + 0x1c) - 0x8000)
+			ram.w8(a + 0xb9, 7)
+			ram.w16(a + 0x114, 0)
+			ram.w16(a + 0x116, 0)
+			ram.w16(a + 0x0e, ram.s16(a + 0x34))
+			return 1
+		0x25:
+			stun_blend(ram, a, row)
+			slide_setup(ram, a, ram.s16(table + 0x26))
+			ram.w16(a + 0x58, 1)
+			ram.w16(a + 0x50, 1)
+			ram.w16(a + 0x118, 0)
+			ram.w16(a + 0x74, 0)
+			ram.w32(a + 0x4c, nx)
+			ram.w16(a + 0x10c, ram.s16(a + 0x2a) + ram.s16(table + 0x24) - 0x8000)
+			ram.w8(a + 0xb9, 0xb)
+			ram.w16(a + 0x114, 0)
+			ram.w16(a + 0x116, 0)
+			ram.w16(a + 0x0e, ram.s16(a + 0x2c))
+			return 1
+		0x27, 0x28, 0x29, 0x2a, 0x2b:
+			stun_blend(ram, a, row)
+			slide_setup(ram, a, ram.s16(table + 0x1e))
+			var base: int = ram.s16(a + 0x34) if kind == 0x2a else ram.s16(a + 0x2a)
+			ram.w16(a + 0x10c, base + ram.s16(table + 0x1c) - 0x8000)
+			juggle_counter(ram, a)
+			ram.w16(a + 0x58, 1)
+			ram.w16(a + 0x50, 1)
+			ram.w16(a + 0x74, 0)
+			ram.w32(a + 0x4c, nx)
+			ram.w8(a + 0xb9, 0xb)
+			ram.w16(a + 0x114, 0)
+			ram.w16(a + 0x116, 0)
+			ram.w16(a + 0x0e, ram.s16(a + 0x2c))
+			return 1
+	return 0
+
 static func step(ram, a: int, b: int) -> void:
 	if ram.u8(a + 0xc3) == 0:
 		return
@@ -842,3 +1085,35 @@ static func update_distances(ram) -> void:
 			ram.w16(a + 0x100, 0)
 			ram.w16(a + 0x102, 0)
 	ram.w32(0x800afa3c, ram.u32(PLAYER_BASE + 0xf8))
+static func react_pick(ram, a: int, b: int) -> void:
+	if ram.s16(b + 0x18) == 0x11:
+		return
+	ram.w16(a + 0xea, 0)
+	if ram.u8(a + 0xce) == 0:
+		return
+	var row: int = ram.u32(a + 0x54)
+	var e: int = Commands.find_reaction(ram, ram.u32(row + 0xc), ram.s16(a + 0x58), a, b)
+	if ram.s16(e) == -0x4000:
+		return
+	var id: int = ram.s16(e + 6)
+	ram.w16(a + 0x1a0, id)
+	ram.w32(a + 0x1a4, slot_row(ram, a, id))
+	ram.w16(a + 0x198, ram.u8(e + 11))
+	ram.w8(a + 0x87, 0)
+	ram.w8(a + 0xce, 0)
+	ram.w8(a + 0xcf, 0)
+	ram.w8(a + 0xd0, 0)
+	ram.w16(a + 0x104, 0)
+	ram.w16(a + 0x6c, ram.u8(e + 10) - ram.s16(a + 0x58))
+	ram.w8(b + 0xd1, 0)
+	ram.w8(b + 0x83, 0)
+	ram.w8(b + 0x84, 0)
+	ram.w8(b + 0x85, 0)
+	ram.w8(b + 0x88, 0)
+	ram.w16(a + 0x19a, kind_of(ram, a, ram.u8(e + 8) & 0x3f))
+	ram.w16(a + 0x19c, 0)
+	ram.w16(a + 0x19e, 0)
+	ram.w8(a + 0x189, 0)
+	ram.w8(a + 0x15d, 0)
+	var dmg: int = FMath.s16(ram.u16(b + 0x5e))
+	ram.w16(a + 0xea, ((dmg - (dmg >> 31)) >> 1) + 0x19)

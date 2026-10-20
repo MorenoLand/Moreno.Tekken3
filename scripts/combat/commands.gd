@@ -325,3 +325,70 @@ static func find_move(ram, list: int, frame: int, a: int, b: int) -> int:
 			return result
 		pos = resume
 	return 0
+static func find_reaction(ram, list: int, frame: int, a: int, b: int) -> int:
+	var held: int = ram.u16(a + Pad.HELD_DIR_MASK)
+	var pressed: int = ram.u16(a + Pad.PRESSED_BUTTONS)
+	var pos: int = list
+	var caller := 0
+	while ram.u16(pos) != END:
+		var type: int = ram.u16(pos)
+		if type == REPEAT:
+			pos = caller + 12
+			continue
+		var cur: int = pos
+		if type == SHARED:
+			caller = pos
+			cur = SHARED_ENTRIES + ram.u16(pos + 6) * 12
+		if ram.u8(cur + 9) <= frame and frame <= ram.u8(cur + 10) and input_matches(ram, a, cur, held, pressed) and stance_ok(ram, cur, a, b) and ram.u8(cur + 3) > 0x44 and reaction_condition(ram, cur, a, b):
+			return cur
+		pos = cur + 12
+	return pos
+static func reaction_condition(ram, entry: int, a: int, b: int) -> bool:
+	var code: int = ram.u8(entry + 3)
+	var brow: int = ram.u32(b + 0x54)
+	match code:
+		0x45:
+			if ram.u8(a + 0xce) == 0:
+				return false
+			return ram.s16(a + 0x30) < 0x2aaa and ram.s16(b + 0x30) < 0x2aaa
+		0x46, 0x47, 0x48, 0x49:
+			if (ram.u32(brow + 0x24) >> 8 & 8) != 0:
+				return false
+			if ram.s16(a + 0x30) > 0x2aa9 or ram.s16(b + 0x30) > 0x2aa9:
+				return false
+			var want: int = {0x46: 0x412, 0x47: 0x217, 0x48: 0x10f, 0x49: 0x412}[code]
+			if code == 0x49:
+				if ram.s16(b + 100) != 0x412:
+					if ram.s16(b + 100) != 0x217:
+						return false
+					return list_has(ram, b, ram.s16(entry + 4))
+			elif ram.s16(b + 100) != want:
+				return false
+			return list_has(ram, b, ram.s16(entry + 4))
+		0x4a:
+			if ram.u16(entry + 4) != ram.s16(b + 0xa0):
+				return false
+			return ram.s16(a + 0x30) < 0x2aaa and ram.s16(b + 0x30) < 0x2aaa
+		0x4b:
+			if ram.s16(a + 0x30) < 0x2aaa and ram.s16(b + 0x30) < 0x2aaa:
+				return sequence_has(ram, ram.u32(ram.u32(b + 0x54)), ram.s16(entry + 4))
+			return false
+	return false
+static func list_has(ram, b: int, id: int) -> bool:
+	var flags: int = ram.u32(ram.u32(b + 0x54) + 0x28)
+	if id == 0:
+		return true
+	for i in 4:
+		if ram.u8(flags + i) == id:
+			return true
+	return false
+static func sequence_has(ram, stream_head: int, index: int) -> bool:
+	var table: int = ram.u32(0x80095694 + ((index << 16) >> 14))
+	var v: int = ram.s16(table)
+	var p: int = table
+	while v >= 1:
+		p += 2
+		if ram.s16(stream_head - 2) == v:
+			return true
+		v = ram.s16(p)
+	return false

@@ -47,7 +47,7 @@ func start(ids: Array, stage_index: int = 0) -> void:
 		f.queue_free()
 	fighters.clear()
 	sim = Match.new()
-	sim.setup(exe.data, _file(BNS + "279.bin"), _file("%s%03d.bin" % [BNS, ids[0] + 3]), _file("%s%03d.bin" % [BNS, ids[1] + 3]))
+	sim.setup(exe.data, _file(BNS + "279.bin"), _file("%s%03d.bin" % [BNS, ids[0] + 3]), _file("%s%03d.bin" % [BNS, ids[1] + 3]), _file("%s%03d.3dmk" % [BNS, ids[0]]), _file("%s%03d.3dmk" % [BNS, ids[1]]))
 	for i in ids.size():
 		var f = Fighter.new()
 		get_child(0).add_child(f)

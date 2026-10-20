@@ -57,3 +57,22 @@ static func tdiv(a: int, b: int) -> int:
 		return 0
 	var q: int = absi(a) / absi(b)
 	return -q if (a < 0) != (b < 0) else q
+static func lzcr(v: int) -> int:
+	v &= 0xffffffff
+	if v & 0x80000000:
+		v = ~v & 0xffffffff
+	if v == 0:
+		return 32
+	return 32 - _bits(v)
+static func _bits(v: int) -> int:
+	var n := 0
+	while v > 0:
+		n += 1
+		v >>= 1
+	return n
+static func table_sqrt(ram, x: int, table: int) -> int:
+	if x == 0:
+		return 0
+	var z: int = lzcr(x) & 0xfffe
+	var y: int = x >> (0x18 - z) if 0x18 - z >= 0 else x << (z - 0x18)
+	return ((ram.s16(table + (y - 0x40) * 2) << ((0x1f - z) >> 1)) & 0xffffffff) >> 12
