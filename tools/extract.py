@@ -91,11 +91,27 @@ def extract_audio(d, cue, out, overwrite):
 def extract_models(out, overwrite):
     n = 0
     for p in sorted((out / "bns").glob("*.3dmk")):
+        arc = out / "bns" / ("%03d" % (int(p.stem) + 2)) / "00.tim"
+        vram = formats.compose_vram(formats.tim_stream(arc.read_bytes())) if arc.exists() else None
+        surfaces = {}
         parts = []
-        for m in models.rest_pose(p.read_bytes()):
-            tris = [[f[0], f[i], f[i + 1]] for f in m["faces"] for i in range(1, len(f) - 1)]
-            parts.append({"row": m["row"], "parent": m["parent"], "pivot": m["pivot"], "verts": [list(v) for v in m["verts"]], "tris": tris})
-        n += write(out / "models" / (p.stem + ".json"), json.dumps(parts, separators=(",", ":")).encode(), overwrite)
+        for m in models.build_parts(p.read_bytes(), [models.IDENTITY] * 32):
+            bykey = {}
+            for poly in m["polys"]:
+                key = (poly["page"], poly["clut"])
+                surf = bykey.setdefault(key, {"tex": surfaces.setdefault(key, len(surfaces)), "idx": [], "uv": []})
+                v, uv = poly["verts"], poly["uv"]
+                order = [0, 1, 2] if len(v) == 3 else [0, 1, 2, 2, 1, 3]
+                surf["idx"] += [v[k] for k in order]
+                surf["uv"] += [c for k in order for c in uv[k]]
+            parts.append({"part": m["part"], "verts": [list(v) for v in m["verts"]], "surfaces": list(bykey.values())})
+        folder = out / "models" / p.stem
+        n += write(folder / "model.json", json.dumps(parts, separators=(",", ":")).encode(), overwrite)
+        if vram:
+            for (page, clut), k in surfaces.items():
+                target = folder / ("surface_%02d.png" % k)
+                if overwrite or not target.exists():
+                    formats.write_png(target, 256, 256, formats.decode_page(vram, page, clut))
     return n
 
 

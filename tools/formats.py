@@ -17,21 +17,23 @@ def parse_arc(b):
     return members if pos == len(b) else None
 def is_tim(b):
     return len(b) >= 20 and b[:4] == b"\x10\x00\x00\x00" and b[4] in (0, 1, 2, 3, 8, 9, 10, 11) and b[5:8] == b"\0\0\0"
-def parse_tim(b):
-    flags = struct.unpack_from("<I", b, 4)[0]
+def parse_tim(b, start=0):
+    flags = struct.unpack_from("<I", b, start + 4)[0]
     mode = flags & 3
-    o = 8
+    o = start + 8
     cluts = []
+    clut_rect = None
     cw = 0
     if flags & 8:
         size, cx, cy, cw, ch = struct.unpack_from("<IHHHH", b, o)
         data = struct.unpack_from("<%dH" % (cw * ch), b, o + 12)
         cluts = [data[r * cw:(r + 1) * cw] for r in range(ch)]
+        clut_rect = (cx, cy, cw, ch)
         o += size
     size, ix, iy, iw, ih = struct.unpack_from("<IHHHH", b, o)
     raw = b[o + 12:o + size]
     width = iw * (4, 2, 1, 2 / 3)[mode]
-    return {"mode": mode, "x": ix, "y": iy, "width": int(width), "height": ih, "raw": raw, "cluts": cluts, "words": iw}
+    return {"mode": mode, "x": ix, "y": iy, "width": int(width), "height": ih, "raw": raw, "cluts": cluts, "clut_rect": clut_rect, "words": iw, "end": o + size}
 def rgba(c):
     r, g, b = (c & 31) * 255 // 31, (c >> 5 & 31) * 255 // 31, (c >> 10 & 31) * 255 // 31
     a = 0 if c == 0 else 255
@@ -67,3 +69,47 @@ def write_png(path, w, h, rgba_bytes):
     png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(rows, 6)) + chunk(b"IEND", b"")
     with open(path, "wb") as f:
         f.write(png)
+
+
+
+def tim_stream(b):
+    out = []
+    o = 0
+    while o + 20 <= len(b) and is_tim(b[o:o + 20]):
+        t = parse_tim(b, o)
+        out.append(t)
+        o = t["end"]
+    return out
+
+
+def compose_vram(tims, page_y=0):
+    vram = [0] * (1024 * 512)
+    for t in tims:
+        w = t["words"]
+        raw = struct.unpack_from("<%dH" % (w * t["height"]), t["raw"])
+        for r in range(t["height"]):
+            o = (page_y + t["y"] + r) * 1024 + 384 + t["x"]
+            vram[o:o + w] = raw[r * w:(r + 1) * w]
+        if t["clut_rect"]:
+            cx, cy, cw, ch = t["clut_rect"]
+            for r in range(ch):
+                o = (504 + cy + r) * 1024 + cx
+                vram[o:o + cw] = t["cluts"][r]
+    return vram
+
+
+def decode_page(vram, page, clut):
+    tpage = page + 6
+    px, py, mode = (tpage & 15) * 64, (tpage >> 4 & 1) * 256, tpage >> 7 & 3
+    cx, cy = (clut & 63) * 16, 504 + (clut >> 6)
+    pal = [rgba(c) for c in vram[cy * 1024 + cx:cy * 1024 + cx + (16 if mode == 0 else 256)]]
+    out = bytearray()
+    for y in range(256):
+        row = vram[(py + y) * 1024 + px:(py + y) * 1024 + px + (64 if mode == 0 else 128)]
+        if mode == 0:
+            for w in row:
+                out += pal[w & 15] + pal[w >> 4 & 15] + pal[w >> 8 & 15] + pal[w >> 12]
+        else:
+            for w in row:
+                out += pal[w & 255] + pal[w >> 8]
+    return bytes(out)
