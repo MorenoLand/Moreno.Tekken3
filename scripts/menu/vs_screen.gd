@@ -91,7 +91,7 @@ func _place(texture: ImageTexture, at: Vector2) -> TextureRect:
 	screen.add_child(rect)
 	return rect
 func _panel(p: int, exe) -> void:
-	var character: int = first_character if p == 0 else second_character
+	var character: int = first_roster if p == 0 else second_roster
 	var rgb := Color8(exe.u8(COLORS + character * 4 + 1), exe.u8(COLORS + character * 4 + 2), exe.u8(COLORS + character * 4 + 3))
 	var holder := Control.new()
 	var origin: Vector2 = PANEL_POSITION[p]
@@ -116,7 +116,7 @@ func _panel(p: int, exe) -> void:
 	screen.add_child(holder)
 	movers.append([holder, -140.0 if p == 0 else 140.0, 0.0])
 func _name(p: int, exe, font) -> void:
-	var character: int = first_character if p == 0 else second_character
+	var character: int = first_roster if p == 0 else second_roster
 	var text: String = exe.cstring(exe.u32(exe.u32(0x80097d40 + character * 16)))
 	var texture: ImageTexture = font.render_clut(text, 2, 0x7e98)
 	var width: int = (text.length() - 1) * 21 + 24

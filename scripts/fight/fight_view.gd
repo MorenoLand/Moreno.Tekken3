@@ -111,7 +111,7 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 		hud.queue_free()
 	hud = Hud.new()
 	add_child(hud)
-	names = [_name(ids[0]), _name(ids[1])]
+	names = [_roster_name(roster[0]), _roster_name(roster[1])]
 	title = options.get("title", "")
 	hud.stage = options.get("stage", 0)
 	hud.base = options.get("base", 0)
@@ -285,6 +285,9 @@ func _banner() -> void:
 			hud.say("")
 		_:
 			hud.say("")
+# Portrait/roster ids follow the exe name table directly; the model header index does not for the last characters.
+func _roster_name(roster_id: int) -> String:
+	return exe.cstring(exe.u32(exe.u32(0x80097d40 + roster_id * 16)))
 func _name(model: int) -> String:
 	var file := FileAccess.open("%s%03d.bin" % [BNS, model + 3], FileAccess.READ)
 	file.seek(1)
