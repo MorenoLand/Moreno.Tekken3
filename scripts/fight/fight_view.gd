@@ -45,7 +45,7 @@ func _ready() -> void:
 	env.environment.ambient_light_color = Color(0.7, 0.7, 0.75)
 	viewport.add_child(env)
 	exe = Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02"))
-func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: bool = false, practice: bool = false) -> void:
+func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: bool = false, practice: bool = false, options: Dictionary = {}) -> void:
 	if stage_node != null:
 		stage_node.queue_free()
 	stage_node = Stage.new()
@@ -75,6 +75,10 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 	sfx.setup(ids)
 	cpus = [null, Cpu.new() if not versus and not practice else null]
 	sim.practice = practice
+	sim.rounds_to_win = options.get("rounds", 2)
+	var fractions: Array = options.get("fractions", [1.0, 1.0])
+	for p in 2:
+		sim.ram.w32(sim.actor(p) + 0x3f4, int(sim.ram.u32(sim.actor(p) + 0x3f8) * fractions[p]))
 	clock = 0.0
 	if hud != null:
 		hud.queue_free()
@@ -151,7 +155,8 @@ func _follow() -> void:
 	var between := Vector2(second.x - first.x, second.z - first.z)
 	var gap := between.length()
 	if gap > 0.9 or not camera_ready:
-		axis = between / maxf(gap, 0.001)
+		var turn := clampf(atan2(between.y, between.x), -0.3, 0.3) if between.x >= 0.0 else clampf(atan2(-between.y, -between.x), -0.3, 0.3)
+		axis = Vector2(cos(turn), sin(turn))
 	var right := axis
 	var forward := Vector3(right.y, 0.0, -right.x)
 	var mid := (first + second) * 0.5
@@ -160,4 +165,4 @@ func _follow() -> void:
 	var wanted := target - forward * distance + Vector3(0, 0.2, 0)
 	camera.position = camera.position.lerp(wanted, 0.2) if camera_ready else wanted
 	camera_ready = true
-	camera.look_at(camera.position.lerp(target, 1.0) if false else target)
+	camera.look_at(target)

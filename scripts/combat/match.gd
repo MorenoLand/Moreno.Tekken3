@@ -27,9 +27,10 @@ enum Phase {INTRO, FIGHT, ROUND_OVER, MATCH_OVER}
 const INTRO_FRAMES := 150
 const ROUND_TIME := 2400
 const OUTRO_FRAMES := 210
-const ROUNDS_TO_WIN := 2
 var phase := Phase.INTRO
 var phase_frames := 0
+var rounds_to_win := 2
+var elapsed := 0
 var timer := ROUND_TIME
 var wins := [0, 0]
 var round_number := 1
@@ -263,6 +264,9 @@ func percent(p: int) -> int:
 	var a := actor(p)
 	var unit: int = ram.s32(a + 0x3f8) >> 12
 	return (ram.u32(a + 0x3f4) + unit - 1) / unit
+func fraction(p: int) -> float:
+	var a := actor(p)
+	return float(ram.u32(a + 0x3f4)) / maxf(float(ram.u32(a + 0x3f8)), 1.0)
 func win_pose(p: int, buttons: int) -> void:
 	var a := actor(p)
 	var b := actor(1 - p)
@@ -321,8 +325,8 @@ func flow() -> void:
 	match phase:
 		Phase.INTRO:
 			if phase_frames == 1:
-				cue(0x103b if round_number < 3 else 0x103a)
-			elif phase_frames == 40 and round_number < 3:
+				cue(0x103b if round_number < rounds_to_win * 2 - 1 else 0x103a)
+			elif phase_frames == 40 and round_number < rounds_to_win * 2 - 1:
 				cue(0x1033 + round_number)
 			elif phase_frames == 90:
 				cue(0x103c)
@@ -330,13 +334,14 @@ func flow() -> void:
 				phase = Phase.FIGHT
 				phase_frames = 0
 		Phase.FIGHT:
+			elapsed += 1
 			if not practice:
 				timer -= 1
 			if ram.u32(actor(0) + 0x3f4) == 0 or ram.u32(actor(1) + 0x3f4) == 0 or timer < 1:
 				finish_round()
 		Phase.ROUND_OVER:
 			if phase_frames >= OUTRO_FRAMES:
-				if wins[0] >= ROUNDS_TO_WIN or wins[1] >= ROUNDS_TO_WIN:
+				if wins[0] >= rounds_to_win or wins[1] >= rounds_to_win:
 					phase = Phase.MATCH_OVER
 					match_over.emit(last_winner if wins[0] != wins[1] else (0 if percent(0) >= percent(1) else 1))
 				else:
