@@ -23,7 +23,7 @@ Then open the folder with Redot 26.2 and run the main scene (title, character se
 
 Run the main scene. The intro movie leads to the title menu: arcade (ten fights), VS, team battle, time attack, survival, practice, theater and option modes. Tekken Ball and Tekken Force are not ported yet.
 
-Default keys, both remappable under Option Mode, Key Configuration (a controller works out of the box, the d-pad or left stick moves, X / Y / A / B are the four attack buttons, Start pauses):
+Default keys, both remappable under Option Mode, Key Configuration (a controller works out of the box, the d-pad or left stick moves, X / Y / A / B are the four attack buttons, Start or Esc pauses, with Cancel / Command / Reset):
 
 | | Move | LP | RP | LK | RK | Start |
 |---|---|---|---|---|---|---|
@@ -34,4 +34,4 @@ F2 switches between the widescreen view and the original 4:3 shape.
 
 ## Status
 
-Playable. The fight engine (input history, cancel lists, move playback, movement, hit detection, damage, reactions, rounds) is ported from the game's own code and its sound effects, voices, music and stages are read from the disc. The fighters, the fifteen stages, the HUD, the menus and the movies are native. The computer opponent is a simple stand-in, not the original AI, and the in-fight camera is a plain follow camera. Not done: the original AI, the camera shots, Tekken Ball, Tekken Force, the arcade endings and the record screens.
+Playable. The fight engine (input history, cancel lists, move playback, movement, hit detection, damage, reactions, rounds) is ported from the game's own code and its sound effects, voices, music and stages are read from the disc. The fighters, the fifteen stages, the HUD, the menus and the movies are native. The computer opponent is a simple stand-in, not the original AI, and the in-fight camera is a plain follow camera. The theater (movies and the music player), the VS screen, the continue scene and the option pages (game, sounds, keys, records, display adjust, memory card) follow the original screens. Not done: the in-fight camera shots, the attract-mode record screens and the Command list of the pause menu.
