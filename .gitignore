@@ -6,4 +6,3 @@ assets/
 *.cue
 *.iso
 __pycache__/
-AGENTS.md

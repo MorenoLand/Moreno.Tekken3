@@ -83,6 +83,8 @@ def main():
     ap.add_argument("--overwrite", action="store_true")
     a = ap.parse_args()
     out = Path(a.output)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / ".gdignore").touch()
     everything = not (a.records or a.textures)
     if everything or a.records:
         d = disc.Disc(find_disc(a.disc))
