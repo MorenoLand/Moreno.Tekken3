@@ -183,9 +183,16 @@ func _build_pause() -> void:
 	pause_box.add_child(fill)
 	for i in PAUSE_ITEMS.size():
 		var row := TextureRect.new()
-		row.position = Vector2(152, 105 + i * 20)
+		row.position = Vector2(151, 105 + i * 20)
+		row.scale = Vector2(0.62, 0.62)
 		pause_box.add_child(row)
 		pause_items.append(row)
+	var label := TextureRect.new()
+	var text: ImageTexture = hud.font.render_clut("1P PAUSE", 1, 0x7e55)
+	label.texture = text
+	label.size = text.get_size()
+	label.position = Vector2(33, 119)
+	pause_box.add_child(label)
 	hud.screen.add_child(pause_box)
 func _pause_refresh() -> void:
 	for i in PAUSE_ITEMS.size():
