@@ -16,6 +16,7 @@ const Volumes := preload("res://scripts/combat/hit_volumes.gd")
 const Hits := preload("res://scripts/combat/hits.gd")
 const BodyPush := preload("res://scripts/combat/body_push.gd")
 const Damage := preload("res://scripts/combat/damage.gd")
+const Ball := preload("res://scripts/combat/ball.gd")
 const ACTORS := 0x800a9228
 const STRIDE := 0x188c
 const MAX_HEALTH := 0x820000
@@ -42,6 +43,7 @@ var computer := [false, true]
 var trace := false
 var skeleton
 var secondary
+var ball
 var models: Array = []
 const JOINTS := 0x8f4
 const JOINT_SIZE := 0x44
@@ -308,12 +310,22 @@ func win_pose(p: int, buttons: int) -> void:
 	ram.w16(a + 0x19e, 0)
 	ram.w32(a + 4, 0)
 	MoveStep.step(ram, a, b)
+func enable_ball(overlay: PackedByteArray, kind: int, side: int) -> void:
+	ball = Ball.new(ram, sounds)
+	ball.setup(overlay, kind, side)
+	begin_round()
 func begin_round() -> void:
 	timer = round_time
 	phase = Phase.INTRO
 	phase_frames = 0
+	ram.w32(0x80095460, 0)
+	ram.w32(0x8009547c, 0)
 	for p in 2:
 		start_actor(p)
+	if ball != null:
+		ball.start_round()
+		for p in 2:
+			start_actor(p, false)
 func finish_round() -> void:
 	var a0 := percent(0)
 	var a1 := percent(1)
@@ -329,6 +341,7 @@ func finish_round() -> void:
 		wins[1] += 1
 	phase = Phase.ROUND_OVER
 	phase_frames = 0
+	ram.w32(0x8009547c, 1)
 	if last_winner >= 0:
 		win_pose(last_winner, pads[last_winner])
 		cue(0x1011 if computer[last_winner] else 0x1012)
@@ -339,6 +352,9 @@ func cue(id: int) -> void:
 	SoundEvents.play_id(ram, sounds, 0, id)
 func flow() -> void:
 	phase_frames += 1
+	if phase == Phase.INTRO or phase == Phase.FIGHT:
+		ram.w32(0x80095460, ram.u32(0x80095460) + 1)
+	ram.w32(0x80096f2c, int(phase))
 	match phase:
 		Phase.INTRO:
 			if phase_frames == 1:
@@ -375,6 +391,9 @@ func tick() -> void:
 	for p in 2:
 		var a := actor(p)
 		MoveStep.step(ram, a, actor(ram.u8(a + 0x1f)))
+	if ball != null:
+		for p in 2:
+			ball.set_motion(actor(p))
 	MoveStep.update_distances(ram)
 	for p in 2:
 		MovePhysics.run(ram, actor(p))
@@ -385,6 +404,8 @@ func tick() -> void:
 	for p in 2:
 		place_root(p)
 		update_joints(p)
+	if ball != null:
+		ball.after_pose()
 	for p in 2:
 		var a := actor(p)
 		ram.w32(a + 0x3c4, ram.s32(a + 0xf68) - ram.s32(a + 0x3b8))
@@ -421,6 +442,8 @@ func tick() -> void:
 		ram.w32(a + 0x3d0, ram.s32(a + 0x1b8) - ram.s32(a + 0x1ac))
 		ram.w32(a + 0x3d4, ram.s32(a + 0x1bc) - ram.s32(a + 0x1b0))
 		ram.w32(a + 0x3d8, ram.s32(a + 0x1c0) - ram.s32(a + 0x1b4))
+	if ball != null:
+		ball.update(actor(0), actor(1))
 	if trace:
 		for p in 2:
 			var a := actor(p)

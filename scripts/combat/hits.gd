@@ -119,7 +119,7 @@ static func detect(ram, a: int, b: int) -> void:
 		if ram.s16(a + 100) == 0x10f and ram.u8(b + 0x69) == 0xc:
 			if (ram.u8(ram.u32(b + 0x54) + 0x19) <= ram.s16(b + 0x58) and ram.s16(b + 0x58) <= ram.u8(ram.u32(b + 0x54) + 0x1a) - 5) or ram.u8(b + 0xdb) != 0:
 				blocked = true
-		if not blocked:
+		if not blocked and ((ram.u8(0x800afa88) != 7 and ram.u8(0x800afa88) != 8) or ram.u8(b + 0xc4) == 0):
 			var level: int = ram.u16(a + 100)
 			if ram.u8(b + 0xb6) == 2:
 				level |= 1

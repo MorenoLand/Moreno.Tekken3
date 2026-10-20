@@ -834,6 +834,9 @@ static func queue_by_list(ram, a: int, b: int) -> void:
 			look_ahead = f <= ram.u8(e + 10) and speed > 0
 		else:
 			look_ahead = speed >= 1 and (ram.u8(a + ram.s32(a + 0x40c) + 0x41c) & 0xf0) != 0
+	if not look_ahead and ram.u8(0x800afa88) == 7:
+		var lunge: int = 0x800b6678 + ram.s16(a + 0x12) * 6
+		look_ahead = ram.u8(lunge + 5) != 0 and f >= ram.u8(lunge + 5) and speed >= 1
 	if look_ahead:
 		var ahead: int = slot_row(ram, a, ram.s16(e + 6))
 		var saved: int = ram.s16(a + 0x2c)
@@ -1012,6 +1015,13 @@ static func choose_next(ram, a: int) -> void:
 				ram.w8(a + 0x8b, 1)
 				if ram.s16(a + 0x74) > 0:
 					ram.w8(a + 0xb7, 1)
+	if ram.u8(0x800afa88) == 7 and ram.s32(0x800b6684) == ram.u8(a + 0x1e) + 1:
+		ram.w8(a + 0xdb, 1)
+		ram.w8(a + 0xcf, 0)
+		ram.w8(a + 0xd0, 1)
+		face_opponent(ram, a, 0x800ac340)
+		react_to_hit(ram, a, b)
+		ram.w8(a + 0xb7, 1)
 	if ram.u32(a + 0x1a4) == 0:
 		queue_by_list(ram, a, b)
 	if ram.u8(0x800afa93) == 0:
@@ -1043,7 +1053,7 @@ static func opponent_index(ram, a: int) -> int:
 		return ram.u8(a + 0x22)
 	return ram.u8(a + 0x21)
 static func update_distances(ram) -> void:
-	var far: Array = [0, 0]
+	var far: Array = [0, 0, 0, 0]
 	for p in 2:
 		var a: int = PLAYER_BASE + p * PLAYER_SIZE
 		far[p] = 1 if ram.u16(a + 0x1278) >= 0x191 else 0

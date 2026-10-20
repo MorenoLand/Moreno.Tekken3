@@ -131,8 +131,8 @@ func _boxes_overlap(a: Array, b: Array) -> bool:
 		box_b = box_b.expand(v)
 	return box_a.grow(0.0005).intersects(box_b.grow(0.0005))
 func load_floor(index: int) -> void:
-	var table := FileAccess.get_file_as_bytes("res://assets/bns/%03d/01.bin" % (36 + index))
-	var vram := Tim.compose_absolute(Tim.stream(FileAccess.get_file_as_bytes("res://assets/bns/%03d/00.tim" % (36 + index))))
+	build_floor(FileAccess.get_file_as_bytes("res://assets/bns/%03d/01.bin" % (36 + index)), Tim.compose_absolute(Tim.stream(FileAccess.get_file_as_bytes("res://assets/bns/%03d/00.tim" % (36 + index)))))
+func build_floor(table: PackedByteArray, vram: PackedInt32Array) -> void:
 	var atlas := Image.create(GRID * TILE, GRID * TILE, false, Image.FORMAT_RGBA8)
 	for c in GRID * GRID:
 		var w0 := table.decode_u32(4 + c * 8)

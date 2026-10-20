@@ -97,6 +97,12 @@ static func run(ram, a: int) -> void:
 			ram.w32(a + 4, 0)
 		elif ram.s32(a + 0xf6c) + 0x80 < 0:
 			ram.w32(a + 4, (ram.s32(a + 0xf6c) + 0x80) >> 1)
+	if ram.u8(0x800afa88) == 7:
+		var lunge: int = 0x800b6678 + ram.s16(a + 0x12) * 6
+		if ram.u8(lunge + 2) != 0 and ram.u8(lunge + 3) <= f and f <= ram.u8(lunge + 4):
+			var heading: int = ram.s16(a + 0x2a) + ram.s16(lunge)
+			ram.w32(a, ram.s32(a) + FMath.tdiv(ram.u8(lunge + 2) * FMath.sin(ram, heading), 0x7fff))
+			ram.w32(a + 8, ram.s32(a + 8) + FMath.tdiv(ram.u8(lunge + 2) * FMath.cos(ram, heading), 0x7fff))
 	if ram.u8(a + 0xdb) == 0:
 		ram.w16(a + 0x8e, 0)
 	if ram.s16(a + 0x114) != 0:

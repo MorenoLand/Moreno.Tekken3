@@ -27,6 +27,7 @@ var axis := Vector2(1, 0)
 var hud
 var impact
 var ball_view
+var backdrop_vram := PackedInt32Array()
 var ball_hud
 var pause_box: Control
 var pause_items: Array = []
@@ -66,8 +67,13 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 		stage_node.queue_free()
 	stage_node = Stage.new()
 	get_child(0).add_child(stage_node)
-	stage_node.load_stage(stage_index)
-	stage_node.load_floor(stage_index)
+	if options.has("ball"):
+		var arena_vram := BallView.Arena.vram()
+		stage_node.build_floor(BallView.Arena.floor_table(), arena_vram)
+		backdrop_vram = arena_vram
+	else:
+		stage_node.load_stage(stage_index)
+		stage_node.load_floor(stage_index)
 
 	for f in fighters:
 		f.queue_free()
@@ -120,6 +126,7 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 		ball_view = BallView.new()
 		get_child(0).add_child(ball_view)
 		ball_view.setup(sim.ball)
+		ball_view.build_backdrop(backdrop_vram)
 		ball_hud = BallHud.new()
 		ball_hud.setup(hud)
 	if options.get("stage", 0) > 0 or options.get("solo", false):
@@ -173,13 +180,13 @@ func _build_pause() -> void:
 	pause_box.visible = false
 	var frame := ColorRect.new()
 	frame.color = Color.WHITE
-	frame.position = Vector2(144, 97)
-	frame.size = Vector2(80, 72)
+	frame.position = Vector2(147, 98)
+	frame.size = Vector2(47, 69)
 	pause_box.add_child(frame)
 	var fill := ColorRect.new()
-	fill.color = Color(0.03, 0.06, 0.3)
-	fill.position = Vector2(146, 99)
-	fill.size = Vector2(76, 68)
+	fill.color = Color(0.02, 0.05, 0.28)
+	fill.position = Vector2(148, 99)
+	fill.size = Vector2(45, 67)
 	pause_box.add_child(fill)
 	for i in PAUSE_ITEMS.size():
 		var row := TextureRect.new()
@@ -365,6 +372,7 @@ func _follow() -> void:
 	camera.position = camera.position.lerp(wanted, 0.2) if camera_ready else wanted
 	camera_ready = true
 	camera.look_at(target)
+	ball_view.backdrop.position = Vector3(camera.position.x, 0.0, camera.position.z)
 func _follow_ball() -> void:
 	var first: Vector3 = fighters[0].position
 	var second: Vector3 = fighters[1].position
@@ -377,3 +385,4 @@ func _follow_ball() -> void:
 	camera.position = camera.position.lerp(wanted, 0.2) if camera_ready else wanted
 	camera_ready = true
 	camera.look_at(target)
+	ball_view.backdrop.position = Vector3(camera.position.x, 0.0, camera.position.z)

@@ -96,6 +96,10 @@ static func apply_flags(ram, a: int, rec: int) -> void:
 	ram.w8(a + 0xd3, ram.u8(rec + 0x25))
 	ram.w8(a + 0x88, ram.u8(rec + 0x20))
 static func reaction_table(ram, a: int, attacker: int) -> void:
+	if ram.u8(0x800afa88) == 7 and ram.u8(0x800b668c) != 0:
+		var kind: int = ram.u16(ram.u32(0x800ac394) + 0x32)
+		ram.w32(a + 0x1a8, REACTION_B + ((kind & 0xfff) << 1) if (kind & 0xf000) != 0 else REACTION_A + kind * 0x2a)
+		return
 	if ram.u8(a + 0xe7) != 0:
 		ram.w32(a + 0x1a8, 0x8001dec0)
 		return
@@ -134,6 +138,8 @@ static func resolve(ram, a: int) -> void:
 		reaction_table(ram, a, attacker)
 	if ram.s32(0x8009547c) == 0 and ram.s32(0x800954b4) == 0:
 		ram.w32(a + 0x3f4, before + (poison + total) * -0x10000)
+	if ram.u8(0x800afa88) == 7 and ram.u8(attacker + 0x1e) != 2:
+		ram.w32(a + 0x3f4, before)
 	var hp: int = ram.s32(a + 0x3f4)
 	if hp < 0:
 		ram.w32(a + 0x3f4, 0)
