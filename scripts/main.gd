@@ -217,8 +217,12 @@ func _after(winner: int) -> void:
 				_finish_run()
 			else:
 				var again := ContinueScreen.new()
-				again.decided.connect(func(go: bool): _fight(picked[0], opponent, false, false) if go else _summary(["GAME OVER"], _title))
-				_swap(again)
+				again.view = current
+				again.decided.connect(func(go: bool):
+					again.queue_free()
+					_fight(picked[0], opponent, false, false) if go else _summary(["GAME OVER"], _title))
+				current.continue_scene()
+				holder.add_child(again)
 		"SURVIVAL MODE":
 			if winner == 0:
 				wins += 1

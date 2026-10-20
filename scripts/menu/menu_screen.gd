@@ -8,6 +8,7 @@ const BLIP_START := [0x4007, 0.4]
 const BLIP_CURSOR := [0x4035, 0.44]
 const BLIP_CONFIRM := [0x4034, 0.31]
 var cache := {}
+var backdrop: ColorRect
 var blips
 func cue(id: int) -> void:
 	if blips == null:
@@ -25,10 +26,10 @@ func _enter_tree() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	clip_contents = true
-	var back := ColorRect.new()
-	back.color = Color.BLACK
-	back.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(back)
+	backdrop = ColorRect.new()
+	backdrop.color = Color.BLACK
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(backdrop)
 	add_child(screen)
 	resized.connect(_layout)
 	_layout()

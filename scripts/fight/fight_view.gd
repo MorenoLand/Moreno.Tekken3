@@ -19,6 +19,7 @@ signal finished(winner: int)
 signal quit
 var sim
 var paused := false
+var orbit := -1.0
 var sfx
 var cpus: Array = [null, null]
 var camera_ready := false
@@ -186,7 +187,26 @@ func _pause_refresh() -> void:
 		pause_items[i].texture = tex
 		pause_items[i].size = tex.get_size()
 		pause_items[i].modulate = Color(1, 1, 1, 0.45 if i == 1 else 1.0)
+func continue_scene() -> void:
+	paused = true
+	orbit = 0.0
+	fighters[1].visible = false
+	hud.say("", 0)
+	hud.say("", 1)
+	hud.say("", 2)
+	hud.continue_labels()
+func _orbit(delta: float) -> void:
+	orbit += delta * 0.5
+	var target: Vector3 = fighters[0].position + Vector3(0, 0.9, 0)
+	camera.position = target + Vector3(sin(orbit) * 2.6, 0.5 + 0.6 * sin(orbit * 0.7), -cos(orbit) * 2.6)
+	camera.look_at(target)
+	stage_node.follow(fighters[0].position)
 func _process(delta: float) -> void:
+	if hud != null and hud.size != size:
+		hud.size = size
+	if orbit >= 0.0:
+		_orbit(delta)
+		return
 	if sim == null or paused:
 		return
 	clock += delta

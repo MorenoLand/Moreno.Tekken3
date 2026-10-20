@@ -21,6 +21,8 @@ var labels: Array = []
 var banners: Array = [TextureRect.new(), TextureRect.new(), TextureRect.new()]
 var stage_label := TextureRect.new()
 var clock_label := TextureRect.new()
+var coin_label: TextureRect
+var labels_hidden := false
 var demo := false
 var demo_labels: Array = []
 var stage := 0
@@ -147,6 +149,20 @@ func show_coin() -> void:
 	label.size = tex.get_size()
 	label.position = Vector2(253, 24)
 	screen.add_child(label)
+	coin_label = label
+func continue_labels() -> void:
+	labels_hidden = true
+	stage_label.visible = false
+	clock_label.visible = false
+	if coin_label != null:
+		coin_label.visible = false
+	for spec in [["PUSH P1 START", 0x7e15, 34], ["GAME OVER", 0x7e12, 240]]:
+		var tex: ImageTexture = font.render_clut(spec[0], 0, spec[1])
+		var label := TextureRect.new()
+		label.texture = tex
+		label.size = tex.get_size()
+		label.position = Vector2(spec[2], 24)
+		screen.add_child(label)
 func start_demo() -> void:
 	demo = true
 	for plate in plates:
