@@ -4,13 +4,20 @@ const Fighter := preload("res://scripts/fighter/fighter.gd")
 const Stage := preload("res://scripts/fight/stage.gd")
 const Match := preload("res://scripts/combat/match.gd")
 const Hud := preload("res://scripts/fight/hud.gd")
+const Cpu := preload("res://scripts/combat/cpu.gd")
+const Sfx := preload("res://scripts/fight/sfx.gd")
 const BNS := "res://assets/bns/"
 var camera := Camera3D.new()
 var exe
 var fighters: Array = []
 var clock := 0.0
 var stage_node
+signal finished(winner: int)
 var sim
+var sfx
+var health := [0, 0]
+var attacking := [0, 0]
+var cpus: Array = [null, null]
 var camera_ready := false
 var hud
 var previous := [0, 0]
@@ -38,7 +45,7 @@ func _ready() -> void:
 	env.environment.ambient_light_color = Color(0.7, 0.7, 0.75)
 	viewport.add_child(env)
 	exe = Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02"))
-func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1]) -> void:
+func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: bool = false) -> void:
 	if stage_node != null:
 		stage_node.queue_free()
 	stage_node = Stage.new()
@@ -57,6 +64,17 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1]) -> void:
 		var id: int = ids[i]
 		f.setup(exe, _file("%s%03d.3dmk" % [BNS, id]), _file("%s%03d.bin" % [BNS, id + 3]), _file(BNS + "279.bin"), _file("%s%03d/00.tim" % [BNS, id + 2]))
 		fighters.append(f)
+	sim.match_over.connect(func(w): finished.emit(w))
+	sim.computer = [false, not versus]
+	for p in 2:
+		sim.ram.w8(sim.actor(p) + 0xc5, 1 if sim.computer[p] else 0)
+	if sfx != null:
+		sfx.queue_free()
+	sfx = Sfx.new()
+	add_child(sfx)
+	sfx.setup(ids)
+	cpus = [null, Cpu.new() if not versus else null]
+	health = [sim.ram.u32(sim.actor(0) + 0x3f4), sim.ram.u32(sim.actor(1) + 0x3f4)]
 	clock = 0.0
 	if hud != null:
 		hud.queue_free()
@@ -81,14 +99,31 @@ func _process(delta: float) -> void:
 		clock -= TICK
 		for p in 2:
 			var bits := _pad(p)
+			if cpus[p] != null:
+				var thought: Array = cpus[p].think(sim, p)
+				bits = thought[0]
 			sim.pads[p] = bits
 			sim.edges[p] = bits & ~previous[p] & 0xf0
 			previous[p] = bits
 		sim.tick()
 		stepped = true
 		_banner()
+		_sound()
 	if stepped:
 		_present()
+func _sound() -> void:
+	for p in 2:
+		var a: int = sim.actor(p)
+		var hp: int = sim.ram.u32(a + 0x3f4)
+		if hp < health[p]:
+			sfx.play(p, 10 if hp > 0 else 14, 13 if hp > 0 else 17)
+		elif sim.ram.u8(a + 0xcf) != 0 and sim.ram.u8(a + 0xce) != 0:
+			sfx.play(p, 0, 1)
+		health[p] = hp
+		var swing: int = 1 if sim.ram.s16(a + 0x5e) != 0 and sim.ram.s16(a + 0x58) == 1 else 0
+		if swing == 1 and attacking[p] == 0:
+			sfx.play(p, 2, 8)
+		attacking[p] = swing
 func _banner() -> void:
 	match sim.phase:
 		sim.Phase.INTRO:

@@ -8,6 +8,9 @@ const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MO
 const Music := preload("res://scripts/core/music.gd")
 var music := Music.new()
 var current: Control
+var mode := ""
+var ladder := 1
+var picked := [0, 0]
 var holder := AspectRatioContainer.new()
 var widescreen := true
 func _ready() -> void:
@@ -43,11 +46,13 @@ func _mode(item: String) -> void:
 	if item == "QUIT GAME":
 		get_tree().quit()
 	elif item in PLAYABLE:
+		mode = item
+		ladder = 1
 		_select()
 func _select() -> void:
 	music.play_track("select")
 	var select := CharacterSelect.new()
-	select.chosen.connect(_fight)
+	select.chosen.connect(_start_fight)
 	_swap(select)
 func _model_for(character: int) -> int:
 	for id in range(71, 276, 4):
@@ -56,11 +61,21 @@ func _model_for(character: int) -> int:
 		if file.get_8() == character:
 			return id
 	return 71
-func _fight(first: int, second: int) -> void:
+func _start_fight(first: int, second: int) -> void:
+	picked = [first, second]
+	_fight(first, second, mode == "VS MODE")
+func _after(winner: int) -> void:
+	if mode == "ARCADE MODE" and winner == 0 and ladder < 8:
+		ladder += 1
+		_fight(picked[0], randi() % 21)
+	else:
+		_title()
+func _fight(first: int, second: int, versus: bool = false) -> void:
 	music.play_track("fight")
 	var view := FightView.new()
 	_swap(view)
-	view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second])], randi() % 15, [first, second])
+	view.finished.connect(_after)
+	view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second])], randi() % 15, [first, second], versus)
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F2:
 		widescreen = not widescreen
