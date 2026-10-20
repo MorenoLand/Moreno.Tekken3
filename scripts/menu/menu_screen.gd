@@ -9,6 +9,12 @@ const BLIP_CURSOR := [0x4035, 0.44]
 const BLIP_CONFIRM := [0x4034, 0.31]
 var cache := {}
 var blips
+func cue(id: int) -> void:
+	if blips == null:
+		blips = Sfx.new()
+		add_child(blips)
+		blips.pool(4)
+	blips.play_id(id)
 func blip(kind: Array) -> void:
 	if blips == null:
 		blips = Sfx.new()

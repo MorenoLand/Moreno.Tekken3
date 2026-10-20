@@ -1,5 +1,7 @@
 extends Node
 const LEVELS := [45, 70, 77, 81, 84, 88, 92, 96, 100, 104, 108, 112, 115, 119, 123, 127]
+const Exe := preload("res://scripts/core/exe.gd")
+var exe
 var models: Array = []
 var voices: Array = []
 var tones := {}
@@ -25,7 +27,7 @@ func _stream(path: String) -> AudioStreamWAV:
 	return streams[path]
 func play_entry(player: int, entry: int, gain: float = -1.0) -> void:
 	var bank: int = (entry >> 14) & 3
-	if bank == 0:
+	if bank == 0 or (bank == 3 and player >= models.size()):
 		return
 	var folder := _folder(player, bank)
 	var list := _tones(folder)
@@ -46,3 +48,8 @@ func play_entry(player: int, entry: int, gain: float = -1.0) -> void:
 					v.play()
 					return
 			return
+func play_id(id: int) -> void:
+	if exe == null:
+		exe = Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02"))
+	if (id & 0xfff) != 0:
+		play_entry(0, exe.u16(0x80097050 + (id & 0xfff) * 2))

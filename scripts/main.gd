@@ -6,6 +6,7 @@ const FightView := preload("res://scripts/fight/fight_view.gd")
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
 const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE"]
 const OptionsScreen := preload("res://scripts/menu/options_screen.gd")
+const ContinueScreen := preload("res://scripts/menu/continue_screen.gd")
 const Results := preload("res://scripts/menu/results.gd")
 const Music := preload("res://scripts/core/music.gd")
 const TEAM_SIZE := 4
@@ -22,6 +23,7 @@ var carry := [1.0, 1.0]
 var frames := 0
 var wins := 0
 var used: Array = []
+var opponent := 0
 var holder := AspectRatioContainer.new()
 var widescreen := true
 func _ready() -> void:
@@ -147,7 +149,9 @@ func _after(winner: int) -> void:
 			elif winner == 0:
 				_summary(["CONGRATULATIONS", "TIME " + _clock(frames)] if mode == "TIME ATTACK MODE" else ["CONGRATULATIONS"], _title)
 			else:
-				_summary(["GAME OVER"], _title)
+				var again := ContinueScreen.new()
+				again.decided.connect(func(go: bool): _fight(picked[0], opponent, false, false) if go else _summary(["GAME OVER"], _title))
+				_swap(again)
 		"SURVIVAL MODE":
 			if winner == 0:
 				wins += 1
@@ -167,6 +171,7 @@ func _after(winner: int) -> void:
 		_:
 			_title()
 func _fight(first: int, second: int, versus: bool = false, practice: bool = false, options: Dictionary = {}) -> void:
+	opponent = second
 	music.play_track("fight")
 	var view := FightView.new()
 	_swap(view)
