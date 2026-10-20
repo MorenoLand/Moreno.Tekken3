@@ -1,11 +1,13 @@
 extends SubViewportContainer
 const Exe := preload("res://scripts/core/exe.gd")
 const Fighter := preload("res://scripts/fighter/fighter.gd")
+const Stage := preload("res://scripts/fight/stage.gd")
 const BNS := "res://assets/bns/"
 var camera := Camera3D.new()
 var exe
 var fighters: Array = []
 var clock := 0.0
+var stage_node
 func _ready() -> void:
 	stretch = true
 	var viewport := SubViewport.new()
@@ -21,7 +23,7 @@ func _ready() -> void:
 	var env := WorldEnvironment.new()
 	env.environment = Environment.new()
 	env.environment.background_mode = Environment.BG_COLOR
-	env.environment.background_color = Color(0.35, 0.5, 0.7)
+	env.environment.background_color = Color(0.5, 0.52, 0.58)
 	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.environment.ambient_light_color = Color(0.7, 0.7, 0.75)
 	viewport.add_child(env)
@@ -30,11 +32,18 @@ func _ready() -> void:
 	plane.size = Vector2(30, 30)
 	floor_mesh.mesh = plane
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.3, 0.32, 0.28)
+	mat.albedo_color = Color(0.26, 0.25, 0.23)
 	floor_mesh.material_override = mat
+	floor_mesh.name = "Floor"
 	viewport.add_child(floor_mesh)
 	exe = Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02"))
-func start(ids: Array) -> void:
+func start(ids: Array, stage_index: int = 0) -> void:
+	if stage_node != null:
+		stage_node.queue_free()
+	stage_node = Stage.new()
+	get_child(0).add_child(stage_node)
+	stage_node.load_stage(stage_index)
+
 	for f in fighters:
 		f.queue_free()
 	fighters.clear()

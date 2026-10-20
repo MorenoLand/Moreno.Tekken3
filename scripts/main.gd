@@ -1,9 +1,12 @@
 extends Control
+const Movie := preload("res://scripts/menu/movie_screen.gd")
 const Title := preload("res://scripts/menu/title.gd")
 const CharacterSelect := preload("res://scripts/menu/character_select.gd")
 const FightView := preload("res://scripts/fight/fight_view.gd")
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
 const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE"]
+const Music := preload("res://scripts/core/music.gd")
+var music := Music.new()
 var current: Control
 var holder := AspectRatioContainer.new()
 var widescreen := true
@@ -11,9 +14,10 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	holder.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(holder)
+	add_child(music)
 	get_viewport().size_changed.connect(_aspect)
 	_aspect()
-	_title()
+	_intro()
 func _aspect() -> void:
 	var window := get_viewport().get_visible_rect().size
 	holder.ratio = window.x / window.y if widescreen else 4.0 / 3.0
@@ -22,7 +26,16 @@ func _swap(next: Control) -> void:
 		current.queue_free()
 	current = next
 	holder.add_child(next)
+func _intro() -> void:
+	if not FileAccess.file_exists("res://assets/movies/20.ogv"):
+		_title()
+		return
+	var movie := Movie.new()
+	_swap(movie)
+	movie.play(20)
+	movie.finished.connect(_title)
 func _title() -> void:
+	music.play_track("title")
 	var title := Title.new()
 	title.chosen.connect(_mode)
 	_swap(title)
@@ -32,6 +45,7 @@ func _mode(item: String) -> void:
 	elif item in PLAYABLE:
 		_select()
 func _select() -> void:
+	music.play_track("select")
 	var select := CharacterSelect.new()
 	select.chosen.connect(_fight)
 	_swap(select)
@@ -43,9 +57,10 @@ func _model_for(character: int) -> int:
 			return id
 	return 71
 func _fight(first: int, second: int) -> void:
+	music.play_track("fight")
 	var view := FightView.new()
 	_swap(view)
-	view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second])])
+	view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second])], randi() % 15)
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F2:
 		widescreen = not widescreen

@@ -85,3 +85,57 @@ static func to_image(b: PackedByteArray) -> Image:
 			else:
 				img.set_pixel(x, y, _rgba(data.decode_u16((y * w + x) * 2)))
 	return img
+static func compose_absolute(tims: Array) -> PackedInt32Array:
+	var vram := PackedInt32Array()
+	vram.resize(1024 * 512)
+	for t in tims:
+		var w: int = t["words"]
+		for r in t["height"]:
+			for c in w:
+				vram[(t["y"] + r) * 1024 + t["x"] + c] = t["data"].decode_u16((r * w + c) * 2)
+		if not t["clut_rect"].is_empty():
+			var cr: Array = t["clut_rect"]
+			for r in cr[3]:
+				for c in cr[2]:
+					vram[(cr[1] + r) * 1024 + cr[0] + c] = t["clut"][r * cr[2] + c]
+	return vram
+static func decode_texture(vram: PackedInt32Array, tpage: int, clut_word: int) -> Image:
+	var px := (tpage & 15) * 64
+	var py := (tpage >> 4 & 1) * 256
+	var mode := tpage >> 7 & 3
+	var cx := (clut_word & 63) * 16
+	var cy := clut_word >> 6 & 511
+	var pal: Array = []
+	for i in (16 if mode == 0 else 256):
+		pal.append(_rgba(vram[cy * 1024 + cx + i]))
+	var img := Image.create(256, 256, false, Image.FORMAT_RGBA8)
+	for y in 256:
+		var row := (py + y) * 1024 + px
+		if mode == 0:
+			for i in 64:
+				var w := vram[row + i]
+				for n in 4:
+					img.set_pixel(i * 4 + n, y, pal[w >> (n * 4) & 15])
+		else:
+			for i in 128:
+				var w2 := vram[row + i]
+				img.set_pixel(i * 2, y, pal[w2 & 255])
+				img.set_pixel(i * 2 + 1, y, pal[w2 >> 8])
+	return img
+static func decode_region(vram: PackedInt32Array, tpage: int, clut_word: int, region: Rect2i) -> Image:
+	var px := (tpage & 15) * 64
+	var py := (tpage >> 4 & 1) * 256
+	var mode := tpage >> 7 & 3
+	var cx := (clut_word & 63) * 16
+	var cy := clut_word >> 6 & 511
+	var pal: Array = []
+	for i in (16 if mode == 0 else 256):
+		pal.append(_rgba(vram[cy * 1024 + cx + i]))
+	var img := Image.create(region.size.x, region.size.y, false, Image.FORMAT_RGBA8)
+	for y in region.size.y:
+		for x in region.size.x:
+			var u := region.position.x + x
+			var v := region.position.y + y
+			var w := vram[(py + v) * 1024 + px + (u >> 2 if mode == 0 else u >> 1)]
+			img.set_pixel(x, y, pal[w >> ((u & 3) * 4) & 15] if mode == 0 else pal[w >> ((u & 1) * 8) & 255])
+	return img
