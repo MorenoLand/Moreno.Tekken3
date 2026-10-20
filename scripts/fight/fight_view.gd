@@ -7,6 +7,8 @@ const Hud := preload("res://scripts/fight/hud.gd")
 const Cpu := preload("res://scripts/combat/cpu.gd")
 const Sfx := preload("res://scripts/fight/sfx.gd")
 const Options := preload("res://scripts/core/options.gd")
+const Impact := preload("res://scripts/fight/impact.gd")
+const Hits := preload("res://scripts/combat/hits.gd")
 const BNS := "res://assets/bns/"
 var camera := Camera3D.new()
 var exe
@@ -22,6 +24,7 @@ var cpus: Array = [null, null]
 var camera_ready := false
 var axis := Vector2(1, 0)
 var hud
+var impact
 var pause_box: Control
 var pause_items: Array = []
 var pause_index := 0
@@ -65,6 +68,11 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 		f.queue_free()
 	fighters.clear()
 	sim = Match.new()
+	Hits.impacts.clear()
+	if impact != null:
+		impact.queue_free()
+	impact = Impact.new()
+	get_child(0).add_child(impact)
 	sim.setup(exe.data, _file(BNS + "279.bin"), _file("%s%03d.bin" % [BNS, ids[0] + 3]), _file("%s%03d.bin" % [BNS, ids[1] + 3]), _file("%s%03d.3dmk" % [BNS, ids[0]]), _file("%s%03d.3dmk" % [BNS, ids[1]]))
 	for i in ids.size():
 		var f = Fighter.new()
@@ -195,8 +203,17 @@ func _process(delta: float) -> void:
 		stepped = true
 		_banner()
 		_sound()
+		_sparks()
 	if stepped:
 		_present()
+func _sparks() -> void:
+	for hit in Hits.impacts:
+		var victim: int = hit[3]
+		var blocked: bool = sim.ram.u8(victim + 0xcf) != 0
+		var at := Vector3(hit[0], -hit[1], -hit[2]) * 0.001
+		var side: float = 1.0 if fighters[0].position.x < fighters[1].position.x else -1.0
+		impact.burst(at, blocked, side)
+	Hits.impacts.clear()
 func _sound() -> void:
 	for event in sim.sounds:
 		sfx.play_entry(event[0], event[1])

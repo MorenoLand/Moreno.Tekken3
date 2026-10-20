@@ -4,6 +4,7 @@ extends RefCounted
 const FMath := preload("res://scripts/combat/fmath.gd")
 const Volumes := preload("res://scripts/combat/hit_volumes.gd")
 const SQRT_TABLE := 0x8004af40
+static var impacts: Array = []
 static func abs_half(a: int, b: int) -> int:
 	return absi(a - b) >> 1
 static func trunc_mid(a: int, b: int) -> int:
@@ -132,6 +133,7 @@ static func detect(ram, a: int, b: int) -> void:
 				ram.w8(b + 0xce, 1)
 				ram.w16(b + 0xee, ram.u8(row_a + 0x2c))
 				ram.w8(free + 0x21, 1)
+				impacts.append([ram.s32(free), ram.s32(free + 4), ram.s32(free + 8), b])
 				ram.w8(free + 0x20, ram.u8(a + 0x1e))
 				ram.w8(b + 0xe7, ram.u8(a + 0xe6))
 				if ram.s16(a + 0xa0) == 0x898:
