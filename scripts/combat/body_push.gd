@@ -1,4 +1,6 @@
 extends RefCounted
+# Pushes overlapping fighters apart so they cannot stand inside each other.
+# Fields are read with ram.u8/u16/u32 at "actor + offset"; offsets are listed at the top of ram.gd.
 const FMath := preload("res://scripts/combat/fmath.gd")
 const SQRT_TABLE := 0x8004af40
 const ATAN_TABLE := 0x800210c8

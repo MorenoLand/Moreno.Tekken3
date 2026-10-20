@@ -1,4 +1,6 @@
 extends RefCounted
+# Hit detection between one fighter attack segments and the other fighter body spheres.
+# Fields are read with ram.u8/u16/u32 at "actor + offset"; offsets are listed at the top of ram.gd.
 const FMath := preload("res://scripts/combat/fmath.gd")
 const Volumes := preload("res://scripts/combat/hit_volumes.gd")
 const SQRT_TABLE := 0x8004af40

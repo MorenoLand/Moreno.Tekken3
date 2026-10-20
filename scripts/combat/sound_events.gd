@@ -1,4 +1,6 @@
 extends RefCounted
+# Turns move events (hits, blocks, voices, footsteps) into sound ids for the sfx player.
+# Fields are read with ram.u8/u16/u32 at "actor + offset"; offsets are listed at the top of ram.gd.
 const ID_TABLE := 0x80097050
 const VOICE_TABLES := 0x8001ad54
 const SCRIPTS := 0x800971f8

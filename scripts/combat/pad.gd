@@ -1,4 +1,6 @@
 extends RefCounted
+# Controller history ring and button edge tracking kept inside the actor, as the original does.
+# Fields are read with ram.u8/u16/u32 at "actor + offset"; offsets are listed at the top of ram.gd.
 const DIRECTIONS := 0x80010738
 const HISTORY := 0x41c
 const EDGE_HISTORY := 0x462

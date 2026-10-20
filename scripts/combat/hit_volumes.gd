@@ -1,4 +1,6 @@
 extends RefCounted
+# Builds the body spheres and attack segments from the joint positions each frame.
+# Fields are read with ram.u8/u16/u32 at "actor + offset"; offsets are listed at the top of ram.gd.
 const FMath := preload("res://scripts/combat/fmath.gd")
 const JOINTS := 0x8f4
 const JOINT_SIZE := 0x44

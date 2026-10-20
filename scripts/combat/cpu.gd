@@ -1,4 +1,6 @@
 extends RefCounted
+# Stand-in computer opponent (not the original AI): produces a pad word each frame.
+# Fields are read with ram.u8/u16/u32 at "actor + offset"; offsets are listed at the top of ram.gd.
 var seed_value := 12345
 var level := 1
 var hold := 0

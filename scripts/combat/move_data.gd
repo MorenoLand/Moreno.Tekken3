@@ -1,4 +1,6 @@
 extends RefCounted
+# Loads a fighter data record into RAM and fixes up its pointers the way the original loader does.
+# Fields are read with ram.u8/u16/u32 at "actor + offset"; offsets are listed at the top of ram.gd.
 const CHAR_PTR := 0x800adc20
 const COMMON_PTR := 0x800adc28
 const SLOT_BASE := [0x80300000, 0x80380000]

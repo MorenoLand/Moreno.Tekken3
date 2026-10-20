@@ -1,4 +1,6 @@
 extends RefCounted
+# Turns a registered hit into damage, block or counter state, and updates health.
+# Fields are read with ram.u8/u16/u32 at "actor + offset"; offsets are listed at the top of ram.gd.
 const MoveStep := preload("res://scripts/combat/move_step.gd")
 const FMath := preload("res://scripts/combat/fmath.gd")
 const REACTION_A := 0x80010ce8

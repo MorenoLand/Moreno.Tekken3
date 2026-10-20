@@ -1,4 +1,6 @@
 extends RefCounted
+# Owns the two fighters, runs one 60 Hz tick in the original order, and handles rounds and match flow.
+# Fields are read with ram.u8/u16/u32 at "actor + offset"; offsets are listed at the top of ram.gd.
 const Ram := preload("res://scripts/combat/ram.gd")
 const MoveData := preload("res://scripts/combat/move_data.gd")
 const Pad := preload("res://scripts/combat/pad.gd")

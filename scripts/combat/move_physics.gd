@@ -1,4 +1,6 @@
 extends RefCounted
+# Movement of the fighter each frame (steps, turns, jumps, knockback) from the move row data.
+# Fields are read with ram.u8/u16/u32 at "actor + offset"; offsets are listed at the top of ram.gd.
 const FMath := preload("res://scripts/combat/fmath.gd")
 const MoveStep := preload("res://scripts/combat/move_step.gd")
 const SLIDE_X := 0x8009e600

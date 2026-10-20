@@ -1,4 +1,6 @@
 extends RefCounted
+# Per-frame move playback: advancing frames, choosing the next move, reacting to hits.
+# Fields are read with ram.u8/u16/u32 at "actor + offset"; offsets are listed at the top of ram.gd.
 const FMath := preload("res://scripts/combat/fmath.gd")
 const Pad := preload("res://scripts/combat/pad.gd")
 const Commands := preload("res://scripts/combat/commands.gd")

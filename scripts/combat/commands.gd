@@ -1,4 +1,6 @@
 extends RefCounted
+# Cancel-list evaluation: which input, stance and condition code lets a move chain into another.
+# Fields are read with ram.u8/u16/u32 at "actor + offset"; offsets are listed at the top of ram.gd.
 const Pad := preload("res://scripts/combat/pad.gd")
 const SHARED_ENTRIES := 0x80017c78
 const PATTERN_TABLE_A := 0x800954d0

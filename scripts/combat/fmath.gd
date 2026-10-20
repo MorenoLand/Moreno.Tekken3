@@ -1,4 +1,6 @@
 extends RefCounted
+# Fixed-point helpers: sin/cos tables from the exe, atan2, integer square root, C-style division.
+# Fields are read with ram.u8/u16/u32 at "actor + offset"; offsets are listed at the top of ram.gd.
 const SIN_TABLE := 0x8001e8c4
 const COS_TABLE := 0x8001f0c4
 const ATAN_TABLE := 0x800210c8
