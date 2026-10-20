@@ -1,5 +1,6 @@
 extends Node
 const LEVELS := [45, 70, 77, 81, 84, 88, 92, 96, 100, 104, 108, 112, 115, 119, 123, 127]
+const Options := preload("res://scripts/core/options.gd")
 const Exe := preload("res://scripts/core/exe.gd")
 var exe
 var models: Array = []
@@ -44,7 +45,7 @@ func play_entry(player: int, entry: int, gain: float = -1.0) -> void:
 				if not v.playing:
 					v.stream = stream
 					v.pitch_scale = clampf(pow(2.0, (note - int(tone["center"]) + int(tone["shift"]) / 128.0) / 12.0), 0.05, 8.0)
-					v.volume_db = linear_to_db(LEVELS[(entry >> 6) & 15] / 127.0 * int(tone["vol"]) / 127.0 if gain < 0.0 else gain)
+					v.volume_db = linear_to_db(maxf((LEVELS[(entry >> 6) & 15] / 127.0 * int(tone["vol"]) / 127.0 if gain < 0.0 else gain) * Options.get_value("sfx") / 100.0, 0.0001))
 					v.play()
 					return
 			return

@@ -54,5 +54,5 @@ func _play(path: String, gain: float) -> void:
 	var ogg := AudioStreamOggVorbis.load_from_file(ProjectSettings.globalize_path(path))
 	ogg.loop = true
 	stream = ogg
-	volume_db = linear_to_db(maxf(gain, 0.05))
+	volume_db = linear_to_db(maxf(gain * Options.get_value("music") / 100.0, 0.001))
 	play()

@@ -1,6 +1,6 @@
 extends RefCounted
 const PATH := "user://options.cfg"
-const DEFAULTS := {"difficulty": 1, "fights": 3, "time": 2, "guard": 0, "change": 1, "speaker": 0, "bgm": 0}
+const DEFAULTS := {"difficulty": 1, "fights": 1, "time": 2, "guard": 1, "change": 1, "hold": 1, "quick": 1, "speaker": 0, "bgm": 1, "music": 100, "sfx": 100, "vibration": 1}
 const TIMES := [60, 50, 40, 30, 20]
 static var values := {}
 static var keys := {}
@@ -49,6 +49,6 @@ static func save() -> void:
 			file.set_value(section, name, keys[section][name])
 	file.save(PATH)
 static func rounds_to_win() -> int:
-	return get_value("fights") / 2 + 1
+	return get_value("fights") + 1
 static func round_frames() -> int:
 	return TIMES[get_value("time")] * 60
