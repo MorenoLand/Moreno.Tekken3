@@ -5,6 +5,7 @@ const CharacterSelect := preload("res://scripts/menu/character_select.gd")
 const FightView := preload("res://scripts/fight/fight_view.gd")
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
 const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE"]
+const Exe := preload("res://scripts/core/exe.gd")
 const OptionsScreen := preload("res://scripts/menu/options_screen.gd")
 const ContinueScreen := preload("res://scripts/menu/continue_screen.gd")
 const Results := preload("res://scripts/menu/results.gd")
@@ -24,6 +25,7 @@ var frames := 0
 var wins := 0
 var used: Array = []
 var opponent := 0
+var exe
 var holder := AspectRatioContainer.new()
 var widescreen := true
 func _ready() -> void:
@@ -170,17 +172,23 @@ func _after(winner: int) -> void:
 				_team_fight()
 		_:
 			_title()
+func _home(roster: int) -> Dictionary:
+	if exe == null:
+		exe = Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02"))
+	var record: int = exe.u32(0x80097d40 + ROSTER_TO_CHARACTER[roster] * 16)
+	return {"stage": exe.u8(record + 10), "song": exe.u8(record + 11)}
 func _fight(first: int, second: int, versus: bool = false, practice: bool = false, options: Dictionary = {}) -> void:
 	opponent = second
 	if mode == "ARCADE MODE" or mode == "TIME ATTACK MODE":
 		options["stage"] = ladder
 		options["base"] = frames
-	music.play_track("fight")
+	var home := _home(second)
+	music.play_song(home["song"])
 	var view := FightView.new()
 	_swap(view)
 	view.finished.connect(_after)
 	var variant := 1 if mode in ["ARCADE MODE", "TIME ATTACK MODE"] and ladder == LADDER and second == 20 else 0
-	view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second], variant)], randi() % 15, [first, second], versus, practice, options)
+	view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second], variant)], home["stage"] % 15, [first, second], versus, practice, options)
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F2:
 		widescreen = not widescreen
