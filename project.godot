@@ -11,8 +11,12 @@ config_version=5
 [application]
 
 config/name="Tekken 3"
-run/main_scene="res://scenes/browser/asset_browser.tscn"
+run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("26.2", "Redot")
+
+[autoload]
+
+Controls="*res://scripts/core/controls.gd"
 
 [display]
 

@@ -43,6 +43,10 @@ def extract_records(d, out, overwrite):
             else:
                 entry["kind"] = "3dmk" if b[8:12] == b"3DMK" else "vab" if b[:4] == b"pBAV" else "bin"
                 write(out / "bns" / ("%03d.%s" % (i, entry["kind"])), b, overwrite)
+                tims = formats.packed_tims(b) if entry["kind"] == "bin" and (i in (0, 9, 10, 11, 12, 13, 301, 302) or 14 <= i <= 35) else []
+                entry["packed_tims"] = len(tims)
+                for k, t in enumerate(tims):
+                    write(out / "bns" / ("%03d" % i) / ("p%02d.tim" % k), t, overwrite)
         index.append(entry)
     write(out / "bns" / "index.json", json.dumps(index, indent=1).encode(), True)
     write(out / "system" / "SLUS_004.02", d.file("TEKKEN3/SLUS_004.02"), overwrite)

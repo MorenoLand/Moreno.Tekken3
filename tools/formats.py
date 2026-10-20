@@ -113,3 +113,40 @@ def decode_page(vram, page, clut):
             for w in row:
                 out += pal[w & 255] + pal[w >> 8]
     return bytes(out)
+def unpack(src, start=0, limit=1 << 24):
+    out = bytearray()
+    i = start
+    try:
+        flag = src[i]
+        while flag != 0:
+            i += 1
+            while flag > 1:
+                if flag & 1:
+                    out.append(src[i])
+                    i += 1
+                else:
+                    v = src[i] << 8 | src[i + 1]
+                    i += 2
+                    dist = (v & 0x7FF) or 0x800
+                    if dist > len(out):
+                        return None
+                    for _ in range((v >> 11) or 0x20):
+                        out.append(out[-dist])
+                flag >>= 1
+            if len(out) > limit:
+                return None
+            flag = src[i]
+    except IndexError:
+        return None
+    return bytes(out), i + 1
+def packed_tims(src):
+    out = []
+    o = 0
+    while o < len(src):
+        r = unpack(src, o, 1 << 17) if src[o] else None
+        if r and len(r[0]) > 40 and is_tim(r[0][:20]):
+            out.append(r[0])
+            o = (r[1] + 3) & ~3
+        else:
+            o += 4
+    return out
