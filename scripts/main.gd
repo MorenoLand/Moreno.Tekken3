@@ -172,6 +172,9 @@ func _after(winner: int) -> void:
 			_title()
 func _fight(first: int, second: int, versus: bool = false, practice: bool = false, options: Dictionary = {}) -> void:
 	opponent = second
+	if mode == "ARCADE MODE" or mode == "TIME ATTACK MODE":
+		options["stage"] = ladder
+		options["base"] = frames
 	music.play_track("fight")
 	var view := FightView.new()
 	_swap(view)

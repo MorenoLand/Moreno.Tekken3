@@ -8,6 +8,8 @@ const CELL := 1.8
 const GRID := 10
 const CORNERS := [0x0000, 0x003f, 0x3f00, 0x3f3f, 0x3f00, 0x0000, 0x3f3f, 0x003f, 0x3f3f, 0x3f00, 0x003f, 0x0000, 0x003f, 0x3f3f, 0x0000, 0x3f00]
 const REACH := 4
+var walls: MeshInstance3D
+var ground: MeshInstance3D
 func load_stage(index: int) -> void:
 	var model := FileAccess.get_file_as_bytes("res://assets/bns/%03d.bin" % (56 + index))
 	var vram := Tim.compose_absolute(Tim.stream(FileAccess.get_file_as_bytes("res://assets/bns/%03d/00.tim" % (36 + index))))
@@ -88,6 +90,7 @@ func load_stage(index: int) -> void:
 	var node := MeshInstance3D.new()
 	node.mesh = mesh
 	add_child(node)
+	walls = node
 func load_floor(index: int) -> void:
 	var table := FileAccess.get_file_as_bytes("res://assets/bns/%03d/01.bin" % (36 + index))
 	var vram := Tim.compose_absolute(Tim.stream(FileAccess.get_file_as_bytes("res://assets/bns/%03d/00.tim" % (36 + index))))
@@ -130,3 +133,9 @@ func load_floor(index: int) -> void:
 	var node := MeshInstance3D.new()
 	node.mesh = mesh
 	add_child(node)
+	ground = node
+func follow(mid: Vector3) -> void:
+	if walls != null:
+		walls.position = Vector3(mid.x, 0.0, mid.z)
+	if ground != null:
+		ground.position = Vector3(snappedf(mid.x, CELL), 0.0, snappedf(mid.z, CELL))

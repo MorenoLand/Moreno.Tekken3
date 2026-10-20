@@ -87,6 +87,8 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 		hud.queue_free()
 	hud = Hud.new()
 	add_child(hud)
+	hud.stage = options.get("stage", 0)
+	hud.base = options.get("base", 0)
 	hud.bind(sim, roster)
 	_present()
 func _cpu():
@@ -168,6 +170,7 @@ func _follow() -> void:
 	var forward := Vector3(right.y, 0.0, -right.x)
 	var mid := (first + second) * 0.5
 	var distance := maxf(4.4, 2.6 + gap * 0.8)
+	stage_node.follow(mid)
 	var target := mid + Vector3(0, 0.85, 0)
 	var wanted := target - forward * distance + Vector3(0, 0.2, 0)
 	camera.position = camera.position.lerp(wanted, 0.2) if camera_ready else wanted

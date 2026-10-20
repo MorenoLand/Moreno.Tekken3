@@ -19,6 +19,11 @@ var digits: Array = []
 var lamps: Array = []
 var labels: Array = []
 var banner := TextureRect.new()
+var stage_label := TextureRect.new()
+var clock_label := TextureRect.new()
+var stage := 0
+var base := 0
+var last_clock := -1
 var names_texture: ImageTexture
 var digit_texture: ImageTexture
 func _ready() -> void:
@@ -50,6 +55,14 @@ func _ready() -> void:
 		digits.append(d)
 	banner.position = Vector2(0, 190)
 	screen.add_child(banner)
+	for label in [stage_label, clock_label]:
+		label.scale = Vector2(0.75, 0.55)
+		label.position = Vector2(16, 24)
+		screen.add_child(label)
+	clock_label.position = Vector2(96, 24)
+	clock_label.scale = Vector2(0.58, 0.55)
+	stage_label.scale = Vector2(0.73, 0.55)
+	stage_label.modulate = Color(1.0, 0.5, 0.1)
 func _gradient_rect(colors: Array) -> TextureRect:
 	var image := Image.create(1, 24, false, Image.FORMAT_RGBA8)
 	for y in 24:
@@ -92,9 +105,23 @@ func say(text: String) -> void:
 	banner.texture = tex
 	banner.size = tex.get_size()
 	banner.position = Vector2(184 - tex.get_width() / 2, 200)
+func _clock(count: int) -> void:
+	if count == last_clock:
+		return
+	last_clock = count
+	var seconds := count / 60
+	var tex: ImageTexture = font.texture("%02d'%02d\"%02d" % [seconds / 60, seconds % 60, (count % 60) * 100 / 60], 1)
+	clock_label.texture = tex
+	clock_label.size = tex.get_size()
 func _process(_delta: float) -> void:
 	if sim == null:
 		return
+	if stage > 0:
+		if stage_label.texture == null:
+			var tex: ImageTexture = font.texture("STAGE %d" % stage, 1)
+			stage_label.texture = tex
+			stage_label.size = tex.get_size()
+		_clock(base + sim.elapsed)
 	var seconds: int = clampi((sim.timer + 59) / 60, 0, 99)
 	digits[0].texture = _digit(seconds / 10)
 	digits[1].texture = _digit(seconds % 10)
