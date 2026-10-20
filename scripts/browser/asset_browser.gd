@@ -1,6 +1,7 @@
 extends Control
 const ASSETS := "res://assets"
 const ModelView := preload("res://scripts/browser/model_view.gd")
+const FightView := preload("res://scripts/fight/fight_view.gd")
 var tabs: TabContainer
 var player: AudioStreamPlayer
 var image_view: TextureRect
@@ -20,6 +21,7 @@ func _ready() -> void:
 	_add_tab("Music", ASSETS + "/audio/cdda", ".wav", false)
 	_add_tab("Sounds", ASSETS + "/audio/vab", ".wav", false)
 	_add_model_tab()
+	_add_fight_tab()
 func _collect(dir: String, ext: String, out: Array[String]) -> void:
 	for d in DirAccess.get_directories_at(dir):
 		_collect(dir + "/" + d, ext, out)
@@ -75,6 +77,32 @@ func _add_model_tab() -> void:
 	view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	split.add_child(view)
 	list.item_selected.connect(func(i: int) -> void: view.show_model(ids[i]))
+func _add_fight_tab() -> void:
+	var ids: Array[int] = []
+	for f in DirAccess.get_files_at(ASSETS + "/bns"):
+		if f.ends_with(".3dmk"):
+			ids.append(f.get_basename().to_int())
+	ids.sort()
+	var box := VBoxContainer.new()
+	box.name = "Fight"
+	tabs.add_child(box)
+	var bar := HBoxContainer.new()
+	box.add_child(bar)
+	var picks: Array[OptionButton] = []
+	for n in 2:
+		var pick := OptionButton.new()
+		for id in ids:
+			pick.add_item("Fighter %d" % [(id - 71) / 4])
+		pick.select(15 if n == 0 else 17)
+		bar.add_child(pick)
+		picks.append(pick)
+	var view := FightView.new()
+	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(view)
+	var go := Button.new()
+	go.text = "Start"
+	go.pressed.connect(func() -> void: view.start([ids[picks[0].selected], ids[picks[1].selected]]))
+	bar.add_child(go)
 func _load_image(path: String) -> ImageTexture:
 	var img := Image.new()
 	img.load_png_from_buffer(FileAccess.get_file_as_bytes(path))

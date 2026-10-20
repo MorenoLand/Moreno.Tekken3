@@ -16,6 +16,7 @@ var move_count := 0
 var meshes: Array = []
 var materials := {}
 var tables: Array = []
+var root_matrix: Array = Skeleton.FACING
 func setup(exe, model_bytes: PackedByteArray, character_bytes: PackedByteArray, common_bytes: PackedByteArray, tim_bytes: PackedByteArray) -> void:
 	character = character_bytes
 	common = common_bytes
@@ -212,7 +213,7 @@ func _run(mesh: Dictionary, pose: Array) -> Array:
 	return t0.slice(0, pos)
 func set_frame(frame_index: int) -> void:
 	var pose: PackedInt32Array = motion.frame(stream_bytes, stream_start, frame_index)
-	var world: Dictionary = skeleton.world(model, pose, Skeleton.FACING, [0, 0, 0])
+	var world: Dictionary = skeleton.world(model, pose, root_matrix, [0, 0, 0])
 	for mesh in meshes:
 		var slot: int = Skeleton.PART_SLOTS[mesh["part"]]
 		var verts := _run(mesh, world[slot])
