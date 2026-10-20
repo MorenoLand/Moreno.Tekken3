@@ -60,7 +60,7 @@ func _fight(first: int, second: int) -> void:
 	music.play_track("fight")
 	var view := FightView.new()
 	_swap(view)
-	view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second])], randi() % 15)
+	view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second])], randi() % 15, [first, second])
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F2:
 		widescreen = not widescreen

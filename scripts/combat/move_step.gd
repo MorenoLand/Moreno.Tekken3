@@ -1117,3 +1117,8 @@ static func react_pick(ram, a: int, b: int) -> void:
 	ram.w8(a + 0x15d, 0)
 	var dmg: int = FMath.s16(ram.u16(b + 0x5e))
 	ram.w16(a + 0xea, ((dmg - (dmg >> 31)) >> 1) + 0x19)
+static func clear_events(ram, a: int) -> void:
+	ram.w16(a + 0x70, 0xffff)
+	ram.w16(a + 0x72, 0)
+	ram.w16(a + 0x11e, 0)
+	ram.w16(a + 0x120, 0)

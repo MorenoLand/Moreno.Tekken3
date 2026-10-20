@@ -19,6 +19,19 @@ var ram = Ram.new()
 var pads := [0, 0]
 var edges := [0, 0]
 var motion
+signal round_over(winner: int)
+signal match_over(winner: int)
+enum Phase {INTRO, FIGHT, ROUND_OVER, MATCH_OVER}
+const INTRO_FRAMES := 150
+const ROUND_TIME := 2400
+const OUTRO_FRAMES := 210
+const ROUNDS_TO_WIN := 2
+var phase := Phase.INTRO
+var phase_frames := 0
+var timer := ROUND_TIME
+var wins := [0, 0]
+var round_number := 1
+var last_winner := -1
 var computer := [false, true]
 var trace := false
 var skeleton
@@ -56,11 +69,17 @@ func setup(exe: PackedByteArray, common: PackedByteArray, first: PackedByteArray
 		Pad.reset(ram, a)
 	for p in 2:
 		start_actor(p)
-func start_actor(p: int) -> void:
+func start_actor(p: int, reset_position: bool = true) -> void:
 	var a := actor(p)
 	var b := actor(1 - p)
-	var x: int = -1000 if p == 0 else 1000
-	var face: int = 0x4000 if p == 0 else 0xc000
+	var x: int = ram.u32(a)
+	var z: int = ram.u32(a + 8)
+	var face: int = ram.u16(a + 0xe)
+	if reset_position:
+		x = -1000 if p == 0 else 1000
+		z = 0
+		face = 0x4000 if p == 0 else 0xc000
+	ram.w8(a + 0x1f, ram.u8(b + 0x1e))
 	ram.w32(a + 0x100, 1000)
 	ram.w32(a + 0xfc, 1000)
 	ram.w32(a + 0xf8, 1000)
@@ -83,12 +102,42 @@ func start_actor(p: int) -> void:
 	ram.w16(a + 0x0e, face)
 	ram.w32(a, x)
 	ram.w32(a + 4, 0)
-	ram.w32(a + 8, 0)
+	ram.w32(a + 8, z)
+	ram.w16(a + 0x0c, 0)
+	ram.w16(a + 0x10, 0)
 	ram.w16(a + 0x2c, face)
 	ram.w16(a + 0x30, face)
-	ram.w16(a + 0x1278, 76 if p == 0 else 276)
+	ram.w16(a + 0x1278, 176 + x / 10)
+	ram.w32(a + 0x994, 0xfffffa6f)
+	ram.w32(a + 0x950, 0xfffffbe5)
 	ram.w32(a + 0xf68, x)
-	ram.w32(a + 0xf70, 0)
+	ram.w32(a + 0xf70, z)
+	ram.w32(a + 0x990, x)
+	ram.w32(a + 0x998, z)
+	ram.w32(a + 0x94c, x)
+	ram.w32(a + 0x954, z)
+	for o in [0x3e8, 0x3ec, 0x3f0]:
+		ram.w32(a + o, 0)
+	ram.w32(a + 0x3f4, ram.u32(a + 0x3f8))
+	ram.w16(a + 0x6a, 0xffff)
+	for o in [0x400, 0x76, 0x92, 0x94, 0x9a, 0x9c, 0x9e, 0x46, 0x48, 0x104, 0x106, 0x10a, 0x114, 0x116, 0x118, 0x11a, 0x124, 0x126, 0x122, 0x128, 0xcc, 0xe8, 0xec]:
+		ram.w16(a + o, 0)
+	for o in [0x82, 0xb5, 0x87, 0x89, 0x8a, 0xb7, 0x8c, 0xba, 0xbb, 0xbd, 0xb8, 0xd3, 0xd4, 0xcf, 0xd0, 0xde, 0xdb, 0xbe, 0xbf, 0xc0, 0xc1, 0xc2, 0xc4, 0xc9, 0xc7]:
+		ram.w8(a + o, 0)
+	ram.w8(a + 0xc3, 1)
+	ram.w16(a + 0x1868, 0)
+	ram.w16(a + 0x186a, 0)
+	ram.w16(a + 0x186c, 0)
+	ram.w16(a + 0x186e, 0)
+	ram.w32(a + 0x1870, 0)
+	ram.w32(a + 0x1878, 0)
+	Hits.reset_hits(ram, a)
+	ram.w32(a + 0x194, a + 0x13c)
+	MoveStep.clear_events(ram, a)
+	Volumes.set_radii(ram, a)
+	ram.w32(a + 0x3b8, ram.u32(a + 0xf68))
+	ram.w32(a + 0x3bc, ram.u32(a + 0xf6c))
+	ram.w32(a + 0x3c0, ram.u32(a + 0xf70))
 func place_root(p: int) -> void:
 	var a := actor(p)
 	var prev: int = ram.u32(a + 0x4c)
@@ -208,6 +257,77 @@ func push_radii(a: int) -> void:
 				ram.w16(a + 0x330 + k * 0x10, 0)
 		elif k == 1 or k == 2:
 			ram.w16(a + 0x330 + k * 0x10, 0)
+func percent(p: int) -> int:
+	var a := actor(p)
+	var unit: int = ram.s32(a + 0x3f8) >> 12
+	return (ram.u32(a + 0x3f4) + unit - 1) / unit
+func win_pose(p: int, buttons: int) -> void:
+	var a := actor(p)
+	var b := actor(1 - p)
+	var kind: int = 0
+	if buttons & 0x20:
+		kind = 3
+	if buttons & 0x40:
+		kind = 2
+	if buttons & 0x10:
+		kind = 1
+	if buttons & 0x80:
+		kind = 0
+	ram.w16(a + 0x1a0, 0xd67 + kind)
+	var row := MoveStep.slot_row(ram, a, ram.s16(a + 0x1a0))
+	ram.w32(a + 0x54, row)
+	ram.w32(a + 0x4c, row)
+	ram.w32(a + 0x1a4, row)
+	ram.w16(a + 0x58, 1)
+	ram.w16(a + 0x198, 1)
+	ram.w16(a + 0x19a, MoveStep.kind_of(ram, a, 6))
+	ram.w16(a + 0x19c, 0)
+	ram.w16(a + 0x19e, 0)
+	ram.w32(a + 4, 0)
+	MoveStep.step(ram, a, b)
+func begin_round() -> void:
+	timer = ROUND_TIME
+	phase = Phase.INTRO
+	phase_frames = 0
+	for p in 2:
+		start_actor(p)
+func finish_round() -> void:
+	var a0 := percent(0)
+	var a1 := percent(1)
+	if a1 < a0:
+		last_winner = 0
+		wins[0] += 1
+	elif a0 < a1:
+		last_winner = 1
+		wins[1] += 1
+	else:
+		last_winner = -1
+		wins[0] += 1
+		wins[1] += 1
+	phase = Phase.ROUND_OVER
+	phase_frames = 0
+	if last_winner >= 0:
+		win_pose(last_winner, pads[last_winner])
+	round_over.emit(last_winner)
+func flow() -> void:
+	phase_frames += 1
+	match phase:
+		Phase.INTRO:
+			if phase_frames >= INTRO_FRAMES:
+				phase = Phase.FIGHT
+				phase_frames = 0
+		Phase.FIGHT:
+			timer -= 1
+			if ram.u32(actor(0) + 0x3f4) == 0 or ram.u32(actor(1) + 0x3f4) == 0 or timer < 1:
+				finish_round()
+		Phase.ROUND_OVER:
+			if phase_frames >= OUTRO_FRAMES:
+				if wins[0] >= ROUNDS_TO_WIN or wins[1] >= ROUNDS_TO_WIN:
+					phase = Phase.MATCH_OVER
+					match_over.emit(last_winner if wins[0] != wins[1] else (0 if percent(0) >= percent(1) else 1))
+				else:
+					round_number += 1
+					begin_round()
 func tick() -> void:
 	for p in 2:
 		var a := actor(p)
@@ -292,5 +412,7 @@ func tick() -> void:
 		ram.w16(a + 0x1278, 176 + ram.s32(a + 0xf68) / 10)
 	for p in 2:
 		var a := actor(p)
-		Pad.push(ram, a, ram.u8(a + 0xc6), pads[p], edges[p])
+		var live: bool = phase == Phase.FIGHT
+		Pad.push(ram, a, ram.u8(a + 0xc6), pads[p] if live else 0, edges[p] if live else 0)
 		MoveStep.choose_next(ram, a)
+	flow()
