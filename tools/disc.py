@@ -78,3 +78,12 @@ def logical_map(disc, count=BNS_TABLE_COUNT):
     exe = disc.file("TEKKEN3/SLUS_004.02")
     base = LOGICAL_MAP_VA - EXE_LOAD + EXE_HEADER
     return list(struct.unpack_from("<%dH" % count, exe, base))
+
+
+def xa_sector(disc, lba):
+    disc.f.seek(lba * SECTOR)
+    raw = disc.f.read(SECTOR)
+    if raw[:12] != b"\x00" + b"\xff" * 10 + b"\x00" or raw[15] != 2:
+        raise ValueError("not a mode 2 sector at LBA %d" % lba)
+    form2 = bool(raw[18] & 0x20)
+    return {"file": raw[16], "channel": raw[17], "submode": raw[18], "coding": raw[19], "data": raw[24:24 + (2324 if form2 else 2048)]}
