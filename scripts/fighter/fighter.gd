@@ -7,13 +7,18 @@ var model: PackedByteArray
 var rows: Array = []
 var motion
 var skeleton
+var character: PackedByteArray
+var common: PackedByteArray
 var stream_bytes: PackedByteArray
 var stream_start := 0
 var frames := 1
+var move_count := 0
 var meshes: Array = []
 var materials := {}
 var tables: Array = []
-func setup(exe, model_bytes: PackedByteArray, character: PackedByteArray, common: PackedByteArray, tim_bytes: PackedByteArray) -> void:
+func setup(exe, model_bytes: PackedByteArray, character_bytes: PackedByteArray, common_bytes: PackedByteArray, tim_bytes: PackedByteArray) -> void:
+	character = character_bytes
+	common = common_bytes
 	model = model_bytes
 	motion = Motion.new(exe)
 	skeleton = Skeleton.new(exe)
@@ -23,17 +28,19 @@ func setup(exe, model_bytes: PackedByteArray, character: PackedByteArray, common
 		for w in 14:
 			row.append(model.decode_u32(24 + r * 56 + w * 4))
 		rows.append(row)
-	var table_rows := character.decode_u32(8)
-	var ptr := character.decode_u32(table_rows)
-	stream_bytes = common if ptr >= 0x40000000 else character
-	ptr = ptr - 0x40000000 if ptr >= 0x40000000 else ptr
-	stream_start = stream_bytes.decode_u32(0x1C) + ptr
-	frames = stream_bytes[stream_start]
+	move_count = character.decode_u16(2)
+	select_move(0)
 	var vram := Tim.compose_vram(Tim.stream(tim_bytes))
 	_collect_meshes(vram)
 	tables = [_blank_table(), _blank_table()]
 	for i in 2:
 		set_frame(0)
+func select_move(index: int) -> void:
+	var ptr := character.decode_u32(character.decode_u32(8) + index * 56)
+	stream_bytes = common if ptr >= 0x40000000 else character
+	ptr = ptr - 0x40000000 if ptr >= 0x40000000 else ptr
+	stream_start = stream_bytes.decode_u32(0x1C) + ptr
+	frames = stream_bytes[stream_start]
 func _blank_table() -> Array:
 	var t := []
 	t.resize(256)

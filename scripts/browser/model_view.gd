@@ -10,6 +10,8 @@ var pitch := -0.15
 var distance := 3.0
 var center := Vector3(0, 0.6, 0)
 var clock := 0.0
+var move := SpinBox.new()
+var info := Label.new()
 func _ready() -> void:
 	stretch = true
 	var viewport := SubViewport.new()
@@ -26,6 +28,12 @@ func _ready() -> void:
 	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.environment.ambient_light_color = Color(0.65, 0.65, 0.7)
 	viewport.add_child(env)
+	move.min_value = 0
+	move.value_changed.connect(_select_move)
+	move.position = Vector2(8, 8)
+	add_child(move)
+	info.position = Vector2(8, 44)
+	add_child(info)
 	exe = Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02"))
 	_update_camera()
 func show_model(id: int) -> void:
@@ -35,12 +43,21 @@ func show_model(id: int) -> void:
 	get_child(0).add_child(fighter)
 	fighter.setup(exe, _file("%s%03d.3dmk" % [BNS, id]), _file("%s%03d.bin" % [BNS, id + 3]), _file(BNS + "279.bin"), _file("%s%03d/00.tim" % [BNS, id + 2]))
 	clock = 0.0
+	move.max_value = fighter.move_count - 1
+	move.value = 0
+	_select_move(0)
 	var bounds := AABB()
 	for mesh in fighter.meshes:
 		bounds = bounds.merge(mesh["node"].mesh.get_aabb()) if bounds.size != Vector3.ZERO else mesh["node"].mesh.get_aabb()
 	center = bounds.get_center()
 	distance = bounds.get_longest_axis_size() * 1.3
 	_update_camera()
+func _select_move(index: float) -> void:
+	if fighter == null:
+		return
+	fighter.select_move(int(index))
+	clock = 0.0
+	info.text = "move %d, %d frames" % [int(index), fighter.frames]
 func _file(path: String) -> PackedByteArray:
 	return FileAccess.get_file_as_bytes(path)
 func _process(delta: float) -> void:
