@@ -2,7 +2,16 @@ extends RefCounted
 const Tim := preload("res://scripts/fighter/tim.gd")
 const SHEETS := [[[0, 4, 224], [1, 172, 0]], [[1, 172, 0]], [[2, 0, 0]]]
 var fonts: Array = []
+var vram: PackedInt32Array
+var glyphs := {}
+const PAGES := [0xd, 0xd, 0xe]
 func _init(exe, menu_records: String) -> void:
+	var tims := []
+	for n in 90:
+		var path := "%sp%02d.tim" % [menu_records, n]
+		if FileAccess.file_exists(path):
+			tims.append_array(Tim.stream(FileAccess.get_file_as_bytes(path)))
+	vram = Tim.compose_absolute(tims)
 	for f in 3:
 		var d: int = 0x80021D64 + f * 16
 		var table: int = exe.u32(d)
@@ -30,3 +39,17 @@ func render(text: String, font: int) -> Image:
 	return img
 func texture(text: String, font: int) -> ImageTexture:
 	return ImageTexture.create_from_image(render(text, font))
+func render_clut(text: String, font: int, clut: int) -> ImageTexture:
+	var f: Dictionary = fonts[font]
+	var cell: Vector2i = f["cell"]
+	var img := Image.create(maxi(1, text.length() * f["advance"]), f["line"], false, Image.FORMAT_RGBA8)
+	for i in text.length():
+		var code := text.unicode_at(i)
+		if code == 32:
+			continue
+		var uv: int = f["exe"].u16(f["table"] + code * 2)
+		var key := Vector3i(font, uv, clut)
+		if not glyphs.has(key):
+			glyphs[key] = Tim.decode_region(vram, PAGES[font], clut, Rect2i(uv & 0xFF, uv >> 8, cell.x, cell.y))
+		img.blend_rect(glyphs[key], Rect2i(0, 0, cell.x, cell.y), Vector2i(i * f["advance"], 0))
+	return ImageTexture.create_from_image(img)
