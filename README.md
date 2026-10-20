@@ -15,10 +15,10 @@ A native Redot / Godot port of Tekken 3 (PS1, USA, SLUS-00402), built from the g
 python tools/extract.py "path/to/Tekken 3.cue"
 ```
 
-This reads the disc once and writes the ignored `assets/` folder: every archive record and member, the textures as PNG, the sound-bank samples and the CD music tracks as WAV, and every fighter as a textured, posed model. Options: `--records`, `--textures`, `--audio`, `--models`, `--overwrite`. Existing files are kept unless `--overwrite` is given. Python 3.11+, standard library only.
+This reads the disc once and writes the ignored `assets/` folder: every archive record and member, the textures as PNG, the sound-bank samples and the CD music tracks as WAVand the shipped executable. Options: `--records`, `--textures`, `--audio`, `--overwrite`. Existing files are kept unless `--overwrite` is given. Python 3.11+, standard library only.
 
 Then open the folder with Redot 26.2 and run the main scene: a browser for the extracted textures, the two CD music tracks, every sound-bank sample and the fighter models (drag to orbit, wheel to zoom).
 
 ## Status
 
-Early. Done: disc reader, extractor, asset browser, fighter models with textures, the motion decoder and the skeleton pose. Not done: playing animations, the fight engine, menus, movies. Nothing is playable yet.
+Early. Done: disc reader, extractor, asset browser, and a native fighter pipeline in GDScript (model streams, textures from the game's own TIMs, the keyframe motion decoder, skeleton and limb IK) that plays each fighter's idle animation. Not done: the move list, the fight engine, menus, movies. Nothing is playable yet.

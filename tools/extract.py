@@ -6,8 +6,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 import disc
 import formats
 import audio
-import models
-import pose
 BNS = "TEKKEN3/TEKKEN3.BNS"
 def find_disc(arg):
     if arg:
@@ -47,6 +45,7 @@ def extract_records(d, out, overwrite):
                 write(out / "bns" / ("%03d.%s" % (i, entry["kind"])), b, overwrite)
         index.append(entry)
     write(out / "bns" / "index.json", json.dumps(index, indent=1).encode(), True)
+    write(out / "system" / "SLUS_004.02", d.file("TEKKEN3/SLUS_004.02"), overwrite)
     return index
 def extract_textures(out, overwrite):
     n = 0
@@ -89,41 +88,6 @@ def extract_audio(d, cue, out, overwrite):
             if write(out / "audio" / "cdda" / ("track%02d.wav" % t["number"]), audio.wav_bytes(audio.cdda_pcm(t), 44100, 2), overwrite):
                 n += 1
     return n
-def extract_models(d, out, overwrite):
-    n = 0
-    exe = pose.Exe(d.file("TEKKEN3/SLUS_004.02"))
-    motion, skel = pose.Motion(exe), pose.Pose(exe)
-    common = (out / "bns" / "279.bin").read_bytes()
-    for p in sorted((out / "bns").glob("*.3dmk")):
-        fighter = (int(p.stem) - 71) // 4
-        model = p.read_bytes()
-        character = (out / "bns" / ("%03d.bin" % (int(p.stem) + 3))).read_bytes()
-        world = pose.skeleton(model, skel, pose.idle_pose(motion, character, common), pose.FACING)
-        poses = [world.get(s, (pose.IDENTITY, [0, 0, 0])) for s in range(32)]
-        arc = out / "bns" / ("%03d" % (int(p.stem) + 2)) / "00.tim"
-        vram = formats.compose_vram(formats.tim_stream(arc.read_bytes())) if arc.exists() else None
-        surfaces = {}
-        parts = []
-        for m in models.build_parts(model, poses):
-            bykey = {}
-            for poly in m["polys"]:
-                key = (poly["page"], poly["clut"])
-                surf = bykey.setdefault(key, {"tex": surfaces.setdefault(key, len(surfaces)), "idx": [], "uv": []})
-                v, uv = poly["verts"], poly["uv"]
-                order = [0, 1, 2] if len(v) == 3 else [0, 1, 2, 2, 1, 3]
-                surf["idx"] += [v[k] for k in order]
-                surf["uv"] += [c for k in order for c in uv[k]]
-            parts.append({"part": m["part"], "verts": [list(v) for v in m["verts"]], "surfaces": list(bykey.values())})
-        folder = out / "models" / p.stem
-        n += write(folder / "model.json", json.dumps(parts, separators=(",", ":")).encode(), overwrite)
-        if vram:
-            for (page, clut), k in surfaces.items():
-                target = folder / ("surface_%02d.png" % k)
-                if overwrite or not target.exists():
-                    formats.write_png(target, 256, 256, formats.decode_page(vram, page, clut))
-    return n
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("disc", nargs="?")
@@ -131,20 +95,17 @@ def main():
     ap.add_argument("--records", action="store_true")
     ap.add_argument("--textures", action="store_true")
     ap.add_argument("--audio", action="store_true")
-    ap.add_argument("--models", action="store_true")
     ap.add_argument("--overwrite", action="store_true")
     a = ap.parse_args()
     out = Path(a.output)
     out.mkdir(parents=True, exist_ok=True)
     (out / ".gdignore").touch()
-    everything = not (a.records or a.textures or a.audio or a.models)
+    everything = not (a.records or a.textures or a.audio)
     if everything or a.records:
         d = disc.Disc(find_disc(a.disc))
         print("records:", len(extract_records(d, out, a.overwrite)))
     if everything or a.textures:
         print("textures:", extract_textures(out, a.overwrite))
-    if everything or a.models:
-        print("models:", extract_models(disc.Disc(find_disc(a.disc)), out, a.overwrite))
     if everything or a.audio:
         cue = find_disc(a.disc)
         print("audio files:", extract_audio(disc.Disc(cue), cue, out, a.overwrite))
