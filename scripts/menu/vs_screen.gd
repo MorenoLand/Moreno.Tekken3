@@ -15,9 +15,11 @@ var second_roster := 0
 var first_character := 0
 var second_character := 0
 var stage := 0
+var variant := 0
 var elapsed := 0.0
 var movers: Array = []
-func setup(roster: Array, characters: Array, stage_number: int) -> void:
+func setup(roster: Array, characters: Array, stage_number: int, attract: bool = false) -> void:
+	variant = 1 if attract else 0
 	first_roster = roster[0]
 	second_roster = roster[1]
 	first_character = characters[0]
@@ -28,7 +30,7 @@ func _ready() -> void:
 	var font := GameFont.new(exe, BNS + "010/")
 	var tims := []
 	for n in 42:
-		tims.append_array(Tim.stream(FileAccess.get_file_as_bytes("%s012/p%02d.tim" % [BNS, n])))
+		tims.append_array(Tim.stream(FileAccess.get_file_as_bytes("%s%s/p%02d.tim" % [BNS, "013" if variant == 1 else "012", n])))
 	var vram := Tim.compose_absolute(tims)
 	_tiles(vram)
 	if stage > 0:
@@ -51,10 +53,15 @@ func _tiles(vram: PackedInt32Array) -> void:
 		rect.stretch_mode = TextureRect.STRETCH_SCALE
 		rect.texture_repeat = CanvasItem.TEXTURE_REPEAT_DISABLED
 		screen.add_child(rect)
+func _header_color() -> Color:
+	return Color8(0xd8, 0, 0x08) if variant == 1 else Color8(0x68, 0, 0x80)
+func _header_clear() -> Color:
+	var c := _header_color()
+	return Color(c.r, c.g, c.b, 0.0)
 func _header(font) -> void:
-	screen.add_child(_gradient(Vector2(106, 36), Vector2(110, 36), Color8(0x68, 0, 0x80), Color8(0x68, 0, 0x80, 0), Color8(0x68, 0, 0x80), Color8(0x68, 0, 0x80, 0), false))
+	screen.add_child(_gradient(Vector2(106, 36), Vector2(110, 36), _header_color(), _header_clear(), _header_color(), _header_clear(), false))
 	var bar := ColorRect.new()
-	bar.color = Color8(0x68, 0, 0x80)
+	bar.color = _header_color()
 	bar.position = Vector2(0, 36)
 	bar.size = Vector2(106, 36)
 	screen.add_child(bar)

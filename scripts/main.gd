@@ -76,10 +76,14 @@ func _attract() -> void:
 	mode = "ATTRACT"
 	var home := _home(second)
 	music.play_track("title")
-	var view := FightView.new()
-	_swap(view)
-	view.finished.connect(func(_w): _title())
-	view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second])], home["stage"] % 15, [first, second], true, false, {"demo": true})
+	var intro := VsScreen.new()
+	intro.setup([first, second], [ROSTER_TO_CHARACTER[first], ROSTER_TO_CHARACTER[second]], 1, true)
+	_swap(intro)
+	intro.finished.connect(func():
+		var view := FightView.new()
+		_swap(view)
+		view.finished.connect(func(_w): _title())
+		view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second])], home["stage"] % 15, [first, second], true, false, {"demo": true}))
 func _mode(item: String) -> void:
 	if item == "QUIT GAME":
 		get_tree().quit()
@@ -273,7 +277,7 @@ func _begin_fight(first: int, second: int, versus: bool, practice: bool, options
 	var variant := 1 if mode in ["ARCADE MODE", "TIME ATTACK MODE"] and ladder == LADDER and second == 20 else 0
 	view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second], variant)], home["stage"] % 15, [first, second], versus, practice, options)
 func _unhandled_input(event: InputEvent) -> void:
-	if mode == "ATTRACT" and current is FightView and event.is_pressed() and not event.is_echo() and (event is InputEventKey or event is InputEventJoypadButton):
+	if mode == "ATTRACT" and (current is FightView or current is VsScreen) and event.is_pressed() and not event.is_echo() and (event is InputEventKey or event is InputEventJoypadButton):
 		mode = ""
 		_title()
 		return
