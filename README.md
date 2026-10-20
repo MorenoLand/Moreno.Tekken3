@@ -17,7 +17,7 @@ python tools/extract.py "path/to/Tekken 3.cue"
 
 This reads the disc once and writes the ignored `assets/` folder: every archive record and member, the textures as PNG, the sound-bank samples and the CD music tracks as WAVand the shipped executable. Options: `--records`, `--textures`, `--audio`, `--overwrite`. Existing files are kept unless `--overwrite` is given. Python 3.11+, standard library only.
 
-Then open the folder with Redot 26.2 and run the main scene: a browser for the extracted textures, the two CD music tracks, every sound-bank sample and every fighter animated with all of its moves selectable (drag to orbit, wheel to zoom).
+Then open the folder with Redot 26.2 and run the main scene (title, character select, fight view; F2 toggles the original 4:3 shape, the default fills the window; keyboard and controller). The asset browser is `scenes/browser/asset_browser.tscn`: a browser for the extracted textures, the two CD music tracks, every sound-bank sample and every fighter animated with all of its moves selectable (drag to orbit, wheel to zoom).
 
 ## Status
 

@@ -1,17 +1,36 @@
 extends Control
+const Title := preload("res://scripts/menu/title.gd")
 const CharacterSelect := preload("res://scripts/menu/character_select.gd")
 const FightView := preload("res://scripts/fight/fight_view.gd")
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
+const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE"]
 var current: Control
+var holder := AspectRatioContainer.new()
+var widescreen := true
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	_select()
+	holder.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(holder)
+	get_viewport().size_changed.connect(_aspect)
+	_aspect()
+	_title()
+func _aspect() -> void:
+	var window := get_viewport().get_visible_rect().size
+	holder.ratio = window.x / window.y if widescreen else 4.0 / 3.0
 func _swap(next: Control) -> void:
 	if current != null:
 		current.queue_free()
 	current = next
-	next.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(next)
+	holder.add_child(next)
+func _title() -> void:
+	var title := Title.new()
+	title.chosen.connect(_mode)
+	_swap(title)
+func _mode(item: String) -> void:
+	if item == "QUIT GAME":
+		get_tree().quit()
+	elif item in PLAYABLE:
+		_select()
 func _select() -> void:
 	var select := CharacterSelect.new()
 	select.chosen.connect(_fight)
@@ -28,5 +47,11 @@ func _fight(first: int, second: int) -> void:
 	_swap(view)
 	view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second])])
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("menu_back") and current is FightView:
-		_select()
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F2:
+		widescreen = not widescreen
+		_aspect()
+	if event.is_action_pressed("menu_back"):
+		if current is FightView:
+			_select()
+		elif current is CharacterSelect:
+			_title()

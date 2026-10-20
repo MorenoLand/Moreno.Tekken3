@@ -21,6 +21,8 @@ static func _parse(b: PackedByteArray, start: int) -> Dictionary:
 			clut.append(b.decode_u16(o + 12 + i * 2))
 		o += size
 	var size2 := b.decode_u32(o)
+	if size2 < 12:
+		return {"x": 0, "y": 0, "words": 0, "height": 0, "data": PackedByteArray(), "clut": clut, "clut_rect": clut_rect, "end": o + size2}
 	return {"x": b.decode_u16(o + 4), "y": b.decode_u16(o + 6), "words": b.decode_u16(o + 8), "height": b.decode_u16(o + 10), "data": b.slice(o + 12, o + size2), "clut": clut, "clut_rect": clut_rect, "end": o + size2}
 static func compose_vram(tims: Array, page_y: int = 0) -> PackedInt32Array:
 	var vram := PackedInt32Array()
@@ -73,7 +75,7 @@ static func to_image(b: PackedByteArray) -> Image:
 	var pal: Array = []
 	var colors := 16 if mode == 0 else 256
 	for i in colors:
-		pal.append(_rgba(t["clut"][i]) if t["clut"].size() > i else Color8(i * 255 / (colors - 1), i * 255 / (colors - 1), i * 255 / (colors - 1)))
+		pal.append(_rgba(t["clut"][i]) if t["clut"].size() > i else Color8(i * 255 / (colors - 1), i * 255 / (colors - 1), i * 255 / (colors - 1), 0 if i == 0 else 255))
 	for y in h:
 		for x in w:
 			if mode == 0:

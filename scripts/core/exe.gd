@@ -24,3 +24,5 @@ func s32s(va: int, count: int) -> PackedInt32Array:
 	for i in count:
 		out[i] = s32(va + i * 4)
 	return out
+func u32(va: int) -> int:
+	return data.decode_u32(off(va))
