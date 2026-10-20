@@ -5,6 +5,7 @@ const CharacterSelect := preload("res://scripts/menu/character_select.gd")
 const FightView := preload("res://scripts/fight/fight_view.gd")
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
 const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE"]
+const OptionsScreen := preload("res://scripts/menu/options_screen.gd")
 const Results := preload("res://scripts/menu/results.gd")
 const Music := preload("res://scripts/core/music.gd")
 const TEAM_SIZE := 4
@@ -58,10 +59,13 @@ func _mode(item: String) -> void:
 	elif item == "THEATER MODE":
 		_theater(0)
 	elif item == "OPTION MODE":
-		_title()
+		var options := OptionsScreen.new()
+		options.done.connect(_title)
+		_swap(options)
 	elif item in PLAYABLE:
 		mode = item
 		ladder = 1
+		teams = [[], []]
 		_select()
 func _select() -> void:
 	music.play_track("select")

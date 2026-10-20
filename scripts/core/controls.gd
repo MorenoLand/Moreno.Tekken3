@@ -1,4 +1,5 @@
 extends Node
+const Options := preload("res://scripts/core/options.gd")
 const KEYS := [
 	{"up": KEY_W, "down": KEY_S, "left": KEY_A, "right": KEY_D, "lp": KEY_U, "rp": KEY_I, "lk": KEY_J, "rk": KEY_K, "start": KEY_ENTER, "select": KEY_BACKSPACE},
 	{"up": KEY_UP, "down": KEY_DOWN, "left": KEY_LEFT, "right": KEY_RIGHT, "lp": KEY_KP_4, "rp": KEY_KP_5, "lk": KEY_KP_1, "rk": KEY_KP_2, "start": KEY_KP_ENTER, "select": KEY_KP_0},
@@ -11,7 +12,7 @@ func _ready() -> void:
 			var action := "p%d_%s" % [p + 1, name]
 			InputMap.add_action(action, 0.5)
 			var key := InputEventKey.new()
-			key.physical_keycode = KEYS[p][name]
+			key.physical_keycode = Options.key_for(p, name, KEYS[p][name])
 			InputMap.action_add_event(action, key)
 			var button := InputEventJoypadButton.new()
 			button.button_index = BUTTONS[name]
@@ -42,3 +43,25 @@ func _alias(action: String, first: String, second: String) -> void:
 		var escape := InputEventKey.new()
 		escape.physical_keycode = KEY_ESCAPE
 		InputMap.action_add_event(action, escape)
+func rebind(player: int, name: String, code: int) -> void:
+	var action := "p%d_%s" % [player + 1, name]
+	for event in InputMap.action_get_events(action):
+		if event is InputEventKey:
+			InputMap.action_erase_event(action, event)
+	var key := InputEventKey.new()
+	key.physical_keycode = code
+	InputMap.action_add_event(action, key)
+	Options.set_key(player, name, code)
+	for alias in ["menu_up", "menu_down", "menu_left", "menu_right", "menu_confirm", "menu_back", "menu_start"]:
+		InputMap.erase_action(alias)
+	for dir in ["up", "down", "left", "right"]:
+		_alias("menu_" + dir, "p1_" + dir, "p2_" + dir)
+	_alias("menu_confirm", "p1_lk", "p2_lk")
+	_alias("menu_back", "p1_rk", "p2_rk")
+	_alias("menu_start", "p1_start", "p2_start")
+func defaults() -> void:
+	Options.reset_keys()
+	for p in 2:
+		for name in KEYS[p]:
+			rebind(p, name, KEYS[p][name])
+	Options.reset_keys()

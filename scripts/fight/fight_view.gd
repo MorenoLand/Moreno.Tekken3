@@ -6,6 +6,7 @@ const Match := preload("res://scripts/combat/match.gd")
 const Hud := preload("res://scripts/fight/hud.gd")
 const Cpu := preload("res://scripts/combat/cpu.gd")
 const Sfx := preload("res://scripts/fight/sfx.gd")
+const Options := preload("res://scripts/core/options.gd")
 const BNS := "res://assets/bns/"
 var camera := Camera3D.new()
 var exe
@@ -73,9 +74,11 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 	sfx = Sfx.new()
 	add_child(sfx)
 	sfx.setup(ids)
-	cpus = [null, Cpu.new() if not versus and not practice else null]
+	cpus = [null, _cpu() if not versus and not practice else null]
 	sim.practice = practice
-	sim.rounds_to_win = options.get("rounds", 2)
+	sim.rounds_to_win = options.get("rounds", Options.rounds_to_win())
+	sim.round_time = Options.round_frames()
+	sim.timer = sim.round_time
 	var fractions: Array = options.get("fractions", [1.0, 1.0])
 	for p in 2:
 		sim.ram.w32(sim.actor(p) + 0x3f4, int(sim.ram.u32(sim.actor(p) + 0x3f8) * fractions[p]))
@@ -86,6 +89,10 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 	add_child(hud)
 	hud.bind(sim, roster)
 	_present()
+func _cpu():
+	var cpu := Cpu.new()
+	cpu.level = Options.get_value("difficulty")
+	return cpu
 func _file(path: String) -> PackedByteArray:
 	return FileAccess.get_file_as_bytes(path)
 func _pad(player: int) -> int:

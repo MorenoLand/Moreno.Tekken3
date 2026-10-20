@@ -25,13 +25,13 @@ signal round_over(winner: int)
 signal match_over(winner: int)
 enum Phase {INTRO, FIGHT, ROUND_OVER, MATCH_OVER}
 const INTRO_FRAMES := 150
-const ROUND_TIME := 2400
 const OUTRO_FRAMES := 210
 var phase := Phase.INTRO
 var phase_frames := 0
 var rounds_to_win := 2
 var elapsed := 0
-var timer := ROUND_TIME
+var round_time := 2400
+var timer := 2400
 var wins := [0, 0]
 var round_number := 1
 var last_winner := -1
@@ -292,7 +292,7 @@ func win_pose(p: int, buttons: int) -> void:
 	ram.w32(a + 4, 0)
 	MoveStep.step(ram, a, b)
 func begin_round() -> void:
-	timer = ROUND_TIME
+	timer = round_time
 	phase = Phase.INTRO
 	phase_frames = 0
 	for p in 2:

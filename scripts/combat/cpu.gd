@@ -1,5 +1,6 @@
 extends RefCounted
 var seed_value := 12345
+var level := 1
 var hold := 0
 var plan := 0
 var buttons := 0
@@ -37,11 +38,11 @@ func think(sim, p: int) -> Array:
 			hold = 10
 	else:
 		var r2: int = roll(12)
-		if r2 < 6:
+		if r2 < 3 + level * 3:
 			plan = [0x80, 0x10, 0x40, 0x20][roll(4)]
 			edge = plan
 			hold = 1
-		elif r2 < 9:
+		elif r2 < 9 + (level - 1):
 			plan = back
 			hold = 14 + roll(14)
 		elif r2 < 10:
