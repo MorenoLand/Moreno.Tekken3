@@ -27,15 +27,6 @@ func _ready() -> void:
 	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.environment.ambient_light_color = Color(0.7, 0.7, 0.75)
 	viewport.add_child(env)
-	var floor_mesh := MeshInstance3D.new()
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(30, 30)
-	floor_mesh.mesh = plane
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.26, 0.25, 0.23)
-	floor_mesh.material_override = mat
-	floor_mesh.name = "Floor"
-	viewport.add_child(floor_mesh)
 	exe = Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02"))
 func start(ids: Array, stage_index: int = 0) -> void:
 	if stage_node != null:
@@ -43,6 +34,7 @@ func start(ids: Array, stage_index: int = 0) -> void:
 	stage_node = Stage.new()
 	get_child(0).add_child(stage_node)
 	stage_node.load_stage(stage_index)
+	stage_node.load_floor(stage_index)
 
 	for f in fighters:
 		f.queue_free()
@@ -55,7 +47,7 @@ func start(ids: Array, stage_index: int = 0) -> void:
 		var bottom := 0.0
 		for mesh in f.meshes:
 			bottom = minf(bottom, mesh["node"].mesh.get_aabb().position.y)
-		f.position = Vector3(-0.9 if i == 0 else 0.9, -bottom, 0)
+		f.position = Vector3(0.55 if i == 0 else -0.55, -bottom, 0)
 		f.rotation.y = 0.0 if i == 0 else PI
 		fighters.append(f)
 	clock = 0.0

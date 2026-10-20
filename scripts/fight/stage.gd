@@ -3,6 +3,11 @@ const Tim := preload("res://scripts/fighter/tim.gd")
 const SCALE := 0.004
 const ATLAS := 2048
 const FLAT := Vector2i(-1, -1)
+const TILE := 64
+const CELL := 1.8
+const GRID := 10
+const CORNERS := [0x0000, 0x003f, 0x3f00, 0x3f3f, 0x3f00, 0x0000, 0x3f3f, 0x003f, 0x3f3f, 0x3f00, 0x003f, 0x0000, 0x003f, 0x3f3f, 0x0000, 0x3f00]
+const REACH := 4
 func load_stage(index: int) -> void:
 	var model := FileAccess.get_file_as_bytes("res://assets/bns/%03d.bin" % (56 + index))
 	var vram := Tim.compose_absolute(Tim.stream(FileAccess.get_file_as_bytes("res://assets/bns/%03d/00.tim" % (36 + index))))
@@ -78,6 +83,48 @@ func load_stage(index: int) -> void:
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mesh.surface_set_material(0, m)
+	var node := MeshInstance3D.new()
+	node.mesh = mesh
+	add_child(node)
+func load_floor(index: int) -> void:
+	var table := FileAccess.get_file_as_bytes("res://assets/bns/%03d/01.bin" % (36 + index))
+	var vram := Tim.compose_absolute(Tim.stream(FileAccess.get_file_as_bytes("res://assets/bns/%03d/00.tim" % (36 + index))))
+	var atlas := Image.create(GRID * TILE, GRID * TILE, false, Image.FORMAT_RGBA8)
+	for c in GRID * GRID:
+		var w0 := table.decode_u32(4 + c * 8)
+		var w1 := table.decode_u32(8 + c * 8)
+		atlas.blit_rect(Tim.decode_region(vram, w0 >> 16 & 0x1ff, w1 >> 16, Rect2i(w0 & 0xff, w0 >> 8 & 0xff, TILE, TILE)), Rect2i(0, 0, TILE, TILE), Vector2i(c % GRID * TILE, c / GRID * TILE))
+	var verts := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	for j in range(-REACH, REACH + 1):
+		for i in range(-REACH, REACH + 1):
+			var c := posmod(i, GRID) + (GRID - 1 - posmod(j, GRID)) * GRID
+			var w0 := table.decode_u32(4 + c * 8)
+			var set := (w0 >> 30) * 4
+			var base: Array = []
+			for k in 4:
+				base.append(CORNERS[set + k])
+			var order: Array = [[0, 1, 2, 3], [1, 0, 3, 2], [2, 3, 0, 1], [3, 2, 1, 0]][w0 >> 25 & 3]
+			var origin := Vector2(c % GRID * TILE, c / GRID * TILE)
+			var x0 := (i - 0.5) * CELL
+			var z0 := (j - 0.5) * CELL
+			var corner := [Vector3(x0, 0, z0), Vector3(x0 + CELL, 0, z0), Vector3(x0, 0, z0 + CELL), Vector3(x0 + CELL, 0, z0 + CELL)]
+			for q in [0, 1, 2, 2, 1, 3]:
+				var o: int = base[order[q]]
+				verts.append(corner[q])
+				uvs.append((origin + Vector2(o & 0xff, o >> 8 & 0xff) + Vector2(0.5, 0.5)) / float(GRID * TILE))
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = ImageTexture.create_from_image(atlas)
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mesh.surface_set_material(0, m)
 	var node := MeshInstance3D.new()
