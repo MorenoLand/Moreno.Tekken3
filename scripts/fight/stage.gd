@@ -43,6 +43,7 @@ func load_stage(index: int) -> void:
 					box = box.expand(Vector2i(u & 0xFF, u >> 8))
 				boxes[key] = box
 			o += size
+	_separate_coplanar(polys)
 	var placed := {}
 	var atlas := Image.create(ATLAS, ATLAS, false, Image.FORMAT_RGBA8)
 	atlas.set_pixel(ATLAS - 1, ATLAS - 1, Color.WHITE)
@@ -91,6 +92,44 @@ func load_stage(index: int) -> void:
 	node.mesh = mesh
 	add_child(node)
 	walls = node
+# The original draws in list order with no depth buffer, so overlapping coplanar polygons
+# (decals, trims) never fight. Here each later one is lifted a hair toward the viewer side.
+func _separate_coplanar(polys: Array) -> void:
+	var groups := {}
+	for poly in polys:
+		var c: Array = poly["pos"]
+		var n: Vector3 = (c[1] - c[0]).cross(c[2] - c[0])
+		if n.length() < 1e-9:
+			continue
+		n = n.normalized()
+		var centre: Vector3 = (c[0] + c[1] + c[2]) / 3.0
+		if absf(n.y) > 0.5:
+			n = n if n.y > 0.0 else -n
+		elif n.dot(-centre) < 0.0:
+			n = -n
+		poly["normal"] = n
+		var key := Vector4i(roundi(n.x * 50.0), roundi(n.y * 50.0), roundi(n.z * 50.0), roundi(n.dot(c[0]) / 0.002))
+		if not groups.has(key):
+			groups[key] = []
+		groups[key].append(poly)
+	for key in groups:
+		var list: Array = groups[key]
+		for i in range(1, list.size()):
+			var rank := 0
+			for j in i:
+				if _boxes_overlap(list[i]["pos"], list[j]["pos"]):
+					rank += 1
+			if rank > 0:
+				for k in list[i]["pos"].size():
+					list[i]["pos"][k] += list[i]["normal"] * 0.0004 * rank
+func _boxes_overlap(a: Array, b: Array) -> bool:
+	var box_a := AABB(a[0], Vector3.ZERO)
+	var box_b := AABB(b[0], Vector3.ZERO)
+	for v in a:
+		box_a = box_a.expand(v)
+	for v in b:
+		box_b = box_b.expand(v)
+	return box_a.grow(0.0005).intersects(box_b.grow(0.0005))
 func load_floor(index: int) -> void:
 	var table := FileAccess.get_file_as_bytes("res://assets/bns/%03d/01.bin" % (36 + index))
 	var vram := Tim.compose_absolute(Tim.stream(FileAccess.get_file_as_bytes("res://assets/bns/%03d/00.tim" % (36 + index))))
