@@ -1,0 +1,9 @@
+.godot/
+.import/
+build/
+assets/
+*.bin
+*.cue
+*.iso
+__pycache__/
+AGENTS.md
