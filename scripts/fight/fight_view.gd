@@ -19,7 +19,7 @@ var paused := false
 var sfx
 var cpus: Array = [null, null]
 var camera_ready := false
-var axis := Vector2(1, 0)
+var axis := Vector2(-1, 0)
 var hud
 var title := ""
 var names: Array = []
@@ -197,8 +197,12 @@ func _follow() -> void:
 	var between := Vector2(second.x - first.x, second.z - first.z)
 	var gap := between.length()
 	if gap > 0.9 or not camera_ready:
-		var turn := clampf(atan2(between.y, between.x), -0.3, 0.3) if between.x >= 0.0 else clampf(atan2(-between.y, -between.x), -0.3, 0.3)
-		axis = Vector2(cos(turn), sin(turn))
+		var turn := 0.0
+		if between.x < -0.5:
+			turn = clampf(atan2(-between.y, -between.x), -0.3, 0.3)
+		elif between.x > 0.5:
+			turn = clampf(atan2(between.y, between.x), -0.3, 0.3)
+		axis = Vector2(-cos(turn), -sin(turn))
 	var right := axis
 	var forward := Vector3(right.y, 0.0, -right.x)
 	var mid := (first + second) * 0.5
