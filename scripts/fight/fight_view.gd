@@ -4,7 +4,6 @@ const Fighter := preload("res://scripts/fighter/fighter.gd")
 const Stage := preload("res://scripts/fight/stage.gd")
 const Match := preload("res://scripts/combat/match.gd")
 const Hud := preload("res://scripts/fight/hud.gd")
-const Cpu := preload("res://scripts/combat/cpu.gd")
 const Sfx := preload("res://scripts/fight/sfx.gd")
 const Options := preload("res://scripts/core/options.gd")
 const Impact := preload("res://scripts/fight/impact.gd")
@@ -21,7 +20,6 @@ var sim
 var paused := false
 var orbit := -1.0
 var sfx
-var cpus: Array = [null, null]
 var camera_ready := false
 var axis := Vector2(1, 0)
 var hud
@@ -71,6 +69,9 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 		f.queue_free()
 	fighters.clear()
 	sim = Match.new()
+	sim.demo = options.get("demo", false)
+	sim.ai_level = Options.get_value("difficulty")
+	sim.ai_stage = options.get("ai_stage", 0)
 	Hits.impacts.clear()
 	if impact != null:
 		impact.queue_free()
@@ -92,7 +93,6 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 	sfx = Sfx.new()
 	add_child(sfx)
 	sfx.setup(ids)
-	cpus = [null, _cpu() if not versus and not practice else null]
 	sim.practice = practice
 	sim.rounds_to_win = options.get("rounds", Options.rounds_to_win())
 	sim.round_time = Options.round_frames()
@@ -114,15 +114,10 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 		hud.show_coin()
 	if options.get("demo", false):
 		hud.start_demo()
-		cpus = [_cpu(), _cpu()]
 		sim.computer = [true, true]
 		for p in 2:
 			sim.ram.w8(sim.actor(p) + 0xc5, 1)
 	_present()
-func _cpu():
-	var cpu := Cpu.new()
-	cpu.level = Options.get_value("difficulty")
-	return cpu
 func _file(path: String) -> PackedByteArray:
 	return FileAccess.get_file_as_bytes(path)
 func _pad(player: int) -> int:
@@ -182,7 +177,7 @@ func _build_pause() -> void:
 	hud.screen.add_child(pause_box)
 func _pause_refresh() -> void:
 	for i in PAUSE_ITEMS.size():
-		var clut := 0x7e11 if i == pause_index else 0x7e16
+		var clut := 0x7e12 if i == pause_index else 0x7e16
 		var tex: ImageTexture = hud.font.render_clut(PAUSE_ITEMS[i], 0, clut)
 		pause_items[i].texture = tex
 		pause_items[i].size = tex.get_size()
@@ -215,9 +210,6 @@ func _process(delta: float) -> void:
 		clock -= TICK
 		for p in 2:
 			var bits := _pad(p)
-			if cpus[p] != null:
-				var thought: Array = cpus[p].think(sim, p)
-				bits = thought[0]
 			sim.pads[p] = bits
 			sim.edges[p] = bits & ~previous[p] & 0xf0
 			previous[p] = bits
