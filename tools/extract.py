@@ -72,6 +72,24 @@ def extract_textures(out, overwrite):
         except Exception as e:
             print("skip", p, e)
     return n
+def extract_common_audio(d, out, overwrite):
+    n = 0
+    exe = d.file("TEKKEN3/SLUS_004.02")
+    start = 0xc3e5c
+    banks = []
+    for number, vh_offset in enumerate((90192, 94832), 1):
+        vh = exe[vh_offset:]
+        ps, ts, vs = struct.unpack_from("<HHH", vh, 18)
+        table = 32 + 2048 + ps * 16 * 32
+        total = sum(x * 8 for x in struct.unpack_from("<256H", vh, table)[:vs + 1])
+        samples = audio.vab_samples(vh, exe[start:start + total])
+        start += total
+        tones = audio.vab_tones(vh)
+        for i, data in samples:
+            if write(out / "audio" / "common" / ("%d" % number) / ("%02d.wav" % i), audio.wav_bytes(audio.adpcm_decode(data), 44100, 1), overwrite):
+                n += 1
+        write(out / "audio" / "common" / ("%d" % number) / "tones.json", json.dumps(tones).encode(), True)
+    return n
 def extract_audio(d, cue, out, overwrite):
     n = 0
     table = disc.bns_table(d)
@@ -88,9 +106,11 @@ def extract_audio(d, cue, out, overwrite):
         except ValueError as err:
             print("skip vab", e["id"], err)
             continue
+        write(out / "audio" / "vab" / ("%03d" % e["id"]) / "tones.json", json.dumps(audio.vab_tones(vh)).encode(), True)
         for i, data in samples:
             if write(out / "audio" / "vab" / ("%03d" % e["id"]) / ("%02d.wav" % i), audio.wav_bytes(audio.adpcm_decode(data), 44100, 1), overwrite):
                 n += 1
+    n += extract_common_audio(d, out, overwrite)
     for t in audio.cue_tracks(cue):
         if t["mode"] == "AUDIO":
             if write(out / "audio" / "cdda" / ("track%02d.wav" % t["number"]), audio.wav_bytes(audio.cdda_pcm(t), 44100, 2), overwrite):

@@ -16,8 +16,6 @@ signal finished(winner: int)
 var sim
 var paused := false
 var sfx
-var health := [0, 0]
-var attacking := [0, 0]
 var cpus: Array = [null, null]
 var camera_ready := false
 var hud
@@ -76,7 +74,6 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 	sfx.setup(ids)
 	cpus = [null, Cpu.new() if not versus and not practice else null]
 	sim.practice = practice
-	health = [sim.ram.u32(sim.actor(0) + 0x3f4), sim.ram.u32(sim.actor(1) + 0x3f4)]
 	clock = 0.0
 	if hud != null:
 		hud.queue_free()
@@ -118,18 +115,9 @@ func _process(delta: float) -> void:
 	if stepped:
 		_present()
 func _sound() -> void:
-	for p in 2:
-		var a: int = sim.actor(p)
-		var hp: int = sim.ram.u32(a + 0x3f4)
-		if hp < health[p]:
-			sfx.play(p, 10 if hp > 0 else 14, 13 if hp > 0 else 17)
-		elif sim.ram.u8(a + 0xcf) != 0 and sim.ram.u8(a + 0xce) != 0:
-			sfx.play(p, 0, 1)
-		health[p] = hp
-		var swing: int = 1 if sim.ram.s16(a + 0x5e) != 0 and sim.ram.s16(a + 0x58) == 1 else 0
-		if swing == 1 and attacking[p] == 0:
-			sfx.play(p, 2, 8)
-		attacking[p] = swing
+	for event in sim.sounds:
+		sfx.play_entry(event[0], event[1])
+	sim.sounds.clear()
 func _banner() -> void:
 	match sim.phase:
 		sim.Phase.INTRO:

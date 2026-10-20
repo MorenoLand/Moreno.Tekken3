@@ -37,6 +37,22 @@ def vab_samples(vh, vb):
             out.append((i, vb[pos:pos + sizes[i]]))
         pos += sizes[i]
     return out
+def vab_tones(vh):
+    ps = struct.unpack_from("<H", vh, 18)[0]
+    out = []
+    for prog in range(128):
+        o = 32 + prog * 16
+        count = vh[o]
+        if count == 0:
+            out.append([])
+            continue
+        base = 32 + 2048 + len([1 for q in range(prog) if vh[32 + q * 16]]) * 16 * 32
+        row = []
+        for t in range(count):
+            b = base + t * 32
+            row.append({"vol": vh[b + 2], "pan": vh[b + 3], "center": vh[b + 4], "shift": vh[b + 5], "min": vh[b + 6], "max": vh[b + 7], "vag": struct.unpack_from("<h", vh, b + 22)[0]})
+        out.append(row)
+    return out
 def cue_tracks(cue):
     cue = Path(cue)
     tracks = []

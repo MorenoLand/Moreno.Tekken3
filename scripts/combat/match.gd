@@ -5,6 +5,7 @@ const Pad := preload("res://scripts/combat/pad.gd")
 const MoveStep := preload("res://scripts/combat/move_step.gd")
 const FMath := preload("res://scripts/combat/fmath.gd")
 const MovePhysics := preload("res://scripts/combat/move_physics.gd")
+const SoundEvents := preload("res://scripts/combat/sound_events.gd")
 const Exe := preload("res://scripts/core/exe.gd")
 const Motion := preload("res://scripts/fighter/motion.gd")
 const Skeleton := preload("res://scripts/fighter/skeleton.gd")
@@ -309,11 +310,22 @@ func finish_round() -> void:
 	phase_frames = 0
 	if last_winner >= 0:
 		win_pose(last_winner, pads[last_winner])
+		cue(0x1011 if computer[last_winner] else 0x1012)
+	else:
+		cue(0x1014)
 	round_over.emit(last_winner)
+func cue(id: int) -> void:
+	SoundEvents.play_id(ram, sounds, 0, id)
 func flow() -> void:
 	phase_frames += 1
 	match phase:
 		Phase.INTRO:
+			if phase_frames == 1:
+				cue(0x103b if round_number < 3 else 0x103a)
+			elif phase_frames == 40 and round_number < 3:
+				cue(0x1033 + round_number)
+			elif phase_frames == 90:
+				cue(0x103c)
 			if phase_frames >= INTRO_FRAMES:
 				phase = Phase.FIGHT
 				phase_frames = 0
@@ -330,6 +342,7 @@ func flow() -> void:
 				else:
 					round_number += 1
 					begin_round()
+var sounds: Array = []
 func tick() -> void:
 	for p in 2:
 		var a := actor(p)
@@ -409,6 +422,9 @@ func tick() -> void:
 		for p in 2:
 			var a := actor(p)
 			print("after damage p", p, " hp ", ram.s32(a + 0x3f4), " rec1 ", ram.s16(a + 0x168 + 0x1c), ram.s16(a + 0x168 + 0x1e), " flags22 ", ram.u8(a + 0x168 + 0x22), ram.u8(a + 0x168 + 0x24), ram.u8(a + 0x168 + 0x25), " dmg_atk ", ram.s16(actor(1 - p) + 0x5e), " sphere ", ram.s16(a + 0x168 + 0x18))
+	for p in 2:
+		var a := actor(p)
+		SoundEvents.run(ram, a, MoveStep.opponent(ram, a), sounds)
 	for p in 2:
 		var a := actor(p)
 		ram.w16(a + 0x1278, 176 + ram.s32(a + 0xf68) / 10)

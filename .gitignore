@@ -6,3 +6,4 @@ assets/
 *.cue
 *.iso
 __pycache__/
+*.uid
