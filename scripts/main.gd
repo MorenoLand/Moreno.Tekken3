@@ -1,49 +1,82 @@
 extends Control
 
-const ASSETS := "res://assets/textures"
+const WavLoader := preload("res://scripts/wav_loader.gd")
+const ASSETS := "res://assets"
 
-var list: ItemList
-var view: TextureRect
-var files: Array[String] = []
-var filter_linear := false
+var tabs: TabContainer
+var player: AudioStreamPlayer
+var image_view: TextureRect
+var status: Label
 
 
 func _ready() -> void:
-	var split := HSplitContainer.new()
-	split.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(split)
-	list = ItemList.new()
-	list.custom_minimum_size.x = 260
-	list.item_selected.connect(_show)
-	split.add_child(list)
-	view = TextureRect.new()
-	view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	view.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	view.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	split.add_child(view)
-	_scan(ASSETS)
-	files.sort()
-	for f in files:
-		list.add_item(f.trim_prefix(ASSETS + "/"))
-	if files.size() > 0:
-		list.select(0)
-		_show(0)
-	else:
-		var l := Label.new()
-		l.text = "No textures found. Run: python tools/extract.py <disc.cue>"
-		view.add_child(l)
+	player = AudioStreamPlayer.new()
+	add_child(player)
+	var root := VBoxContainer.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(root)
+	tabs = TabContainer.new()
+	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(tabs)
+	status = Label.new()
+	root.add_child(status)
+	_add_tab("Textures", ASSETS + "/textures", ".png", true)
+	_add_tab("Music", ASSETS + "/audio/cdda", ".wav", false)
+	_add_tab("Sounds", ASSETS + "/audio/vab", ".wav", false)
 
 
-func _scan(dir: String) -> void:
+func _collect(dir: String, ext: String, out: Array[String]) -> void:
 	for d in DirAccess.get_directories_at(dir):
-		_scan(dir + "/" + d)
+		_collect(dir + "/" + d, ext, out)
 	for f in DirAccess.get_files_at(dir):
-		if f.ends_with(".png"):
-			files.append(dir + "/" + f)
+		if f.ends_with(ext):
+			out.append(dir + "/" + f)
 
 
-func _show(i: int) -> void:
+func _add_tab(title: String, dir: String, ext: String, is_image: bool) -> void:
+	var files: Array[String] = []
+	_collect(dir, ext, files)
+	files.sort()
+	var split := HSplitContainer.new()
+	split.name = title
+	tabs.add_child(split)
+	var list := ItemList.new()
+	list.custom_minimum_size.x = 260
+	split.add_child(list)
+	for f in files:
+		list.add_item(f.trim_prefix(dir + "/"))
+	var holder := VBoxContainer.new()
+	holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	split.add_child(holder)
+	if is_image:
+		var view := TextureRect.new()
+		view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		view.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		view.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		holder.add_child(view)
+		list.item_selected.connect(func(i: int) -> void: view.texture = _load_image(files[i]))
+	else:
+		var stop := Button.new()
+		stop.text = "Stop"
+		stop.pressed.connect(player.stop)
+		holder.add_child(stop)
+		list.item_selected.connect(func(i: int) -> void: _play(files[i]))
+	if files.is_empty():
+		status.text = "Missing %s. Run: python tools/extract.py <disc.cue>" % dir
+
+
+func _load_image(path: String) -> ImageTexture:
 	var img := Image.new()
-	img.load_png_from_buffer(FileAccess.get_file_as_bytes(files[i]))
-	view.texture = ImageTexture.create_from_image(img)
+	img.load_png_from_buffer(FileAccess.get_file_as_bytes(path))
+	return ImageTexture.create_from_image(img)
+
+
+func _play(path: String) -> void:
+	var stream := WavLoader.load_file(path)
+	if stream == null:
+		status.text = "Cannot read " + path
+		return
+	player.stream = stream
+	player.play()
+	status.text = "%s  %.1fs" % [path.get_file(), stream.get_length()]

@@ -9,6 +9,16 @@ A native Redot / Godot port of Tekken 3 (PS1, USA, SLUS-00402), built from the g
 - Cross-platform, including the web (WASM).
 - Proper widescreen, window stretching and resolution upscaling.
 
+## Setup
+
+```
+python tools/extract.py "path/to/Tekken 3.cue"
+```
+
+This reads the disc once and writes the ignored `assets/` folder: every archive record and member, the textures as PNG, the sound-bank samples and the CD music tracks as WAV. Options: `--records`, `--textures`, `--audio`, `--overwrite`. Existing files are kept unless `--overwrite` is given. Python 3.11+, standard library only.
+
+Then open the folder with Redot 26.2 and run the main scene: a browser for the extracted textures, the two CD music tracks and every sound-bank sample.
+
 ## Status
 
-Early. The disc reader and the archive table are done; see `tools/disc.py`. Nothing is playable yet.
+Early. Done: disc and ISO reader, the archive table, the extractor, the asset browser. Not done: models, animation, the fight engine, menus, movies. Nothing is playable yet.
