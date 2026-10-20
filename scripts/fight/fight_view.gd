@@ -7,6 +7,8 @@ const Hud := preload("res://scripts/fight/hud.gd")
 const Sfx := preload("res://scripts/fight/sfx.gd")
 const Options := preload("res://scripts/core/options.gd")
 const Impact := preload("res://scripts/fight/impact.gd")
+const BallView := preload("res://scripts/fight/ball_view.gd")
+const BallHud := preload("res://scripts/fight/ball_hud.gd")
 const Hits := preload("res://scripts/combat/hits.gd")
 const BNS := "res://assets/bns/"
 var camera := Camera3D.new()
@@ -24,6 +26,8 @@ var camera_ready := false
 var axis := Vector2(1, 0)
 var hud
 var impact
+var ball_view
+var ball_hud
 var pause_box: Control
 var pause_items: Array = []
 var pause_index := 0
@@ -84,6 +88,8 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 		var id: int = ids[i]
 		f.setup(exe, _file("%s%03d.3dmk" % [BNS, id]), _file("%s%03d.bin" % [BNS, id + 3]), _file(BNS + "279.bin"), _file("%s%03d/00.tim" % [BNS, id + 2]), id)
 		fighters.append(f)
+	if options.has("ball"):
+		sim.enable_ball(_file(BNS + "008.bin"), options["ball"], 0)
 	sim.match_over.connect(func(w): finished.emit.call_deferred(w))
 	sim.computer = [false, not versus]
 	for p in 2:
@@ -110,6 +116,12 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 	hud.stage = options.get("stage", 0)
 	hud.base = options.get("base", 0)
 	hud.bind(sim, roster)
+	if sim.ball != null:
+		ball_view = BallView.new()
+		get_child(0).add_child(ball_view)
+		ball_view.setup(sim.ball)
+		ball_hud = BallHud.new()
+		ball_hud.setup(hud)
 	if options.get("stage", 0) > 0 or options.get("solo", false):
 		hud.show_coin()
 	if options.get("demo", false):
@@ -314,8 +326,14 @@ func _apply() -> void:
 		f.apply_frame()
 		f.position = Vector3(ram.s32(a), -ram.s32(a + 4), -ram.s32(a + 8)) * 0.001
 		f.rotation.y = 3.0 * PI / 2.0 - ram.u16(a + 0x2c) * TAU / 65536.0
+	if ball_view != null:
+		ball_view.refresh()
+		ball_hud.update(sim.ball.s16(0x13c), sim.ball.s16(0x13e))
 	_follow()
 func _follow() -> void:
+	if ball_view != null:
+		_follow_ball()
+		return
 	var first: Vector3 = fighters[0].position
 	var second: Vector3 = fighters[1].position
 	var between := Vector2(second.x - first.x, second.z - first.z)
@@ -330,10 +348,22 @@ func _follow() -> void:
 	var right := axis
 	var forward := Vector3(right.y, 0.0, -right.x)
 	var mid := (first + second) * 0.5
-	var distance := clampf(2.6 + gap * 0.8, 4.4, 6.4)
+	var distance := clampf(2.6 + gap * 0.8, 4.05, 6.4)
 	stage_node.follow(mid)
-	var target := mid + Vector3(0, 0.85 + maxf(mid.y - 0.3, 0.0) * 0.6, 0)
-	var wanted := target - forward * distance + Vector3(0, 0.2, 0)
+	var target := mid + Vector3(0, 1.18 + maxf(mid.y - 0.3, 0.0) * 0.6, 0)
+	var wanted := target - forward * distance + Vector3(0, -0.12, 0)
+	camera.position = camera.position.lerp(wanted, 0.2) if camera_ready else wanted
+	camera_ready = true
+	camera.look_at(target)
+func _follow_ball() -> void:
+	var first: Vector3 = fighters[0].position
+	var second: Vector3 = fighters[1].position
+	var mid := (first + second) * 0.5
+	mid.x = lerpf(mid.x, ball_view.mesh_node.position.x, 0.5)
+	var distance := clampf(5.5 + absf(second.x - first.x) * 0.9, 8.0, 16.0)
+	stage_node.follow(mid)
+	var target := mid + Vector3(0, 1.0, 0)
+	var wanted := target + Vector3(0, 0.6, -distance)
 	camera.position = camera.position.lerp(wanted, 0.2) if camera_ready else wanted
 	camera_ready = true
 	camera.look_at(target)
