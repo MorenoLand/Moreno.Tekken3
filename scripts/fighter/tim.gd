@@ -20,6 +20,8 @@ static func _parse(b: PackedByteArray, start: int) -> Dictionary:
 		for i in cw * ch:
 			clut.append(b.decode_u16(o + 12 + i * 2))
 		o += size
+	if o + 12 > b.size():
+		return {"x": 0, "y": 0, "words": 0, "height": 0, "data": PackedByteArray(), "clut": clut, "clut_rect": clut_rect, "end": b.size()}
 	var size2 := b.decode_u32(o)
 	if size2 < 12:
 		return {"x": 0, "y": 0, "words": 0, "height": 0, "data": PackedByteArray(), "clut": clut, "clut_rect": clut_rect, "end": o + size2}
@@ -93,10 +95,11 @@ static func compose_absolute(tims: Array) -> PackedInt32Array:
 	vram.resize(1024 * 512)
 	for t in tims:
 		var w: int = t["words"]
-		for r in t["height"]:
-			for c in w:
-				vram[(t["y"] + r) * 1024 + t["x"] + c] = t["data"].decode_u16((r * w + c) * 2)
-		if not t["clut_rect"].is_empty():
+		if t["y"] + t["height"] <= 512 and t["x"] + w <= 1024 and t["data"].size() >= w * t["height"] * 2:
+			for r in t["height"]:
+				for c in w:
+					vram[(t["y"] + r) * 1024 + t["x"] + c] = t["data"].decode_u16((r * w + c) * 2)
+		if not t["clut_rect"].is_empty() and t["clut_rect"][1] + t["clut_rect"][3] <= 512:
 			var cr: Array = t["clut_rect"]
 			for r in cr[3]:
 				for c in cr[2]:

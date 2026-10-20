@@ -26,6 +26,10 @@ var demo_labels: Array = []
 var stage := 0
 var base := 0
 var last_clock := -1
+var vram: PackedInt32Array
+var lamp_off: ImageTexture
+var lamp_on: ImageTexture
+var plates: Array = []
 var names_texture: ImageTexture
 var digit_texture: ImageTexture
 func _ready() -> void:
@@ -33,22 +37,46 @@ func _ready() -> void:
 	font = GameFont.new(Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02")), BNS + "010/")
 	names_texture = tim_texture(BNS + "009/p66.tim")
 	digit_texture = tim_texture(BNS + "010/p03.tim")
+	var tims := []
+	for n in 90:
+		var path := "%sp%02d.tim" % [BNS + "010/", n]
+		if FileAccess.file_exists(path):
+			tims.append_array(Tim.stream(FileAccess.get_file_as_bytes(path)))
+	vram = Tim.compose_absolute(tims)
+	lamp_off = _piece(Rect2i(240, 168, 15, 18), 0x7f19)
+	lamp_on = _piece(Rect2i(240, 168, 15, 18), 0x7f18)
+	var plate_clut := 0x7f11 if demo else 0x7f13
 	for p in 2:
-		var frame := ColorRect.new()
-		frame.color = Color(0.04, 0.05, 0.08, 0.85)
-		frame.position = Vector2(BAR_X[p] - 2, BAR_Y - 2)
-		frame.size = Vector2(BAR_WIDTH + 4, BAR_HEIGHT + 4)
-		screen.add_child(frame)
-		var loss := _gradient_rect(LOSS)
+		var loss := _column(0x7ede)
 		screen.add_child(loss)
 		losses.append(loss)
-		var fill := _gradient_rect(FILL)
+		var fill := _column(0x7edc)
 		screen.add_child(fill)
 		fills.append(fill)
+		for cap in [[224, BAR_X[p] - 2], [234, BAR_X[p] + 148]]:
+			var sprite_cap := TextureRect.new()
+			sprite_cap.texture = _piece(Rect2i(cap[0], 168, 6, 24), 0x7ede)
+			sprite_cap.position = Vector2(cap[1], BAR_Y)
+			sprite_cap.size = Vector2(6, 24)
+			screen.add_child(sprite_cap)
+		var plate := TextureRect.new()
+		plate.texture = _piece(Rect2i(220, 168, 1, 10), plate_clut)
+		plate.stretch_mode = TextureRect.STRETCH_SCALE
+		screen.add_child(plate)
+		plates.append(plate)
 		var label := TextureRect.new()
 		screen.add_child(label)
 		labels.append(label)
-		lamps.append([_lamp(Vector2(137, 70)), _lamp(Vector2(151, 70))] if p == 0 else [_lamp(Vector2(202, 70)), _lamp(Vector2(216, 70))])
+		var at := [Vector2(137, 70), Vector2(151, 70)] if p == 0 else [Vector2(202, 70), Vector2(216, 70)]
+		var pair := []
+		for pos in at:
+			var lamp := TextureRect.new()
+			lamp.texture = lamp_off
+			lamp.position = pos
+			lamp.size = Vector2(15, 18)
+			screen.add_child(lamp)
+			pair.append(lamp)
+		lamps.append(pair)
 	for i in 2:
 		var d := TextureRect.new()
 		d.position = Vector2(169 + i * 15, 22)
@@ -65,23 +93,15 @@ func _ready() -> void:
 	clock_label.scale = Vector2(0.58, 0.55)
 	stage_label.scale = Vector2(0.73, 0.55)
 	stage_label.modulate = Color(1.0, 0.5, 0.1)
-func _gradient_rect(colors: Array) -> TextureRect:
-	var image := Image.create(1, 24, false, Image.FORMAT_RGBA8)
-	for y in 24:
-		image.set_pixel(0, y, colors[0] if y < 4 else (colors[1] if y < 15 else colors[2]))
+func _piece(region: Rect2i, clut: int) -> ImageTexture:
+	return ImageTexture.create_from_image(Tim.decode_region(vram, 0xd, clut, region))
+func _column(clut: int) -> TextureRect:
 	var rect := TextureRect.new()
-	rect.texture = ImageTexture.create_from_image(image)
+	rect.texture = _piece(Rect2i(232, 168, 1, 24), clut)
 	rect.stretch_mode = TextureRect.STRETCH_SCALE
 	rect.size = Vector2(BAR_WIDTH, BAR_HEIGHT)
 	rect.position = Vector2(0, BAR_Y)
 	return rect
-func _lamp(at: Vector2) -> ColorRect:
-	var lamp := ColorRect.new()
-	lamp.position = at
-	lamp.size = Vector2(12, 14)
-	lamp.color = Color(0.25, 0.25, 0.3, 0.8)
-	screen.add_child(lamp)
-	return lamp
 func bind(match_sim, roster_indices: Array) -> void:
 	sim = match_sim
 	roster = roster_indices
@@ -91,9 +111,22 @@ func bind(match_sim, roster_indices: Array) -> void:
 		var atlas := AtlasTexture.new()
 		atlas.atlas = names_texture
 		atlas.region = Rect2(0, index * 16, 128, 16) if index < NAMES_COLUMN else Rect2(129, (index - NAMES_COLUMN) * 16, 127, 16)
+		var image := names_texture.get_image().get_region(Rect2i(atlas.region))
+		var left := int(atlas.region.size.x)
+		var right := 0
+		for x in int(atlas.region.size.x):
+			for y in 16:
+				if image.get_pixel(x, y).a > 0.1:
+					left = mini(left, x)
+					right = maxi(right, x + 1)
+		var width: int = maxi(right - left, 1)
+		atlas.region = Rect2(atlas.region.position.x + left, atlas.region.position.y, width, 16)
 		label.texture = atlas
 		label.size = atlas.region.size
-		label.position = Vector2(12, 66) if p == 0 else Vector2(356 - atlas.region.size.x, 66)
+		var at := 14.0 if p == 0 else 354.0 - width
+		label.position = Vector2(at, 66)
+		plates[p].position = Vector2(at - 4, 75)
+		plates[p].size = Vector2(width + 8, 10)
 func _digit(n: int) -> AtlasTexture:
 	var atlas := AtlasTexture.new()
 	atlas.atlas = digit_texture
@@ -113,8 +146,18 @@ func say(text: String, slot: int = 1) -> void:
 	label.texture = tex
 	label.size = tex.get_size()
 	label.position = Vector2(184 - tex.get_width() / 2, [112, 228, 368][slot])
+func show_coin() -> void:
+	var tex: ImageTexture = font.texture("INSERT COIN", 0)
+	var label := TextureRect.new()
+	label.texture = tex
+	label.size = tex.get_size()
+	label.modulate = Color(1.0, 0.8, 0.1)
+	label.position = Vector2(236, 22)
+	screen.add_child(label)
 func start_demo() -> void:
 	demo = true
+	for plate in plates:
+		plate.texture = _piece(Rect2i(220, 168, 1, 10), 0x7f11)
 	for i in 2:
 		var tex: ImageTexture = font.texture("PUSH P%d START" % (i + 1), 0)
 		var label := TextureRect.new()
@@ -155,9 +198,9 @@ func _process(_delta: float) -> void:
 		shown[p] = ratio
 		trail[p] = maxf(ratio, trail[p] - 0.004)
 		_place(fills[p], p, shown[p])
-		_place(losses[p], p, trail[p])
+		_place(losses[p], p, 1.0)
 		for k in 2:
-			lamps[p][k].color = Color(1.0, 0.8, 0.2) if sim.wins[p] > k else Color(0.25, 0.25, 0.3, 0.8)
+			lamps[p][k].texture = lamp_on if sim.wins[p] > k else lamp_off
 func _place(rect: TextureRect, player: int, ratio: float) -> void:
 	var w: float = BAR_WIDTH * clampf(ratio, 0.0, 1.0)
 	rect.size.x = w

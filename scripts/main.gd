@@ -232,6 +232,8 @@ func _fight(first: int, second: int, versus: bool = false, practice: bool = fals
 		options["stage"] = ladder
 		options["base"] = frames
 	var home := _home(second)
+	if mode in ["ARCADE MODE", "TIME ATTACK MODE", "SURVIVAL MODE"]:
+		options["solo"] = true
 	music.play_song(home["song"])
 	var view := FightView.new()
 	_swap(view)

@@ -94,6 +94,8 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 	hud.stage = options.get("stage", 0)
 	hud.base = options.get("base", 0)
 	hud.bind(sim, roster)
+	if options.get("stage", 0) > 0 or options.get("solo", false):
+		hud.show_coin()
 	if options.get("demo", false):
 		hud.start_demo()
 		cpus = [_cpu(), _cpu()]
