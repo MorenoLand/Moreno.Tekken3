@@ -79,7 +79,7 @@ static func to_image(b: PackedByteArray, bands: int = 0) -> Image:
 	for i in colors:
 		pal.append(_rgba(t["clut"][i]) if t["clut"].size() > i else Color8(i * 255 / (colors - 1), i * 255 / (colors - 1), i * 255 / (colors - 1), 0 if i == 0 else 255))
 	for y in h:
-		var shift: int = (y * bands / h) * (256 / bands) if bands > 0 else 0
+		var shift: int = (y / 64) * 64 if bands > 0 else 0
 		for x in w:
 			if bands > 0 and mode == 1:
 				img.set_pixel(x, y, _rgba(t["clut"][mini(data[y * w + x] + shift, 255)]))
