@@ -9,7 +9,8 @@ const VsScreen := preload("res://scripts/menu/vs_screen.gd")
 # Disc movie per portrait id (oracle theater reads: Gon 18, Anna 17, Doctor B shares Yoshimitsu's, True Ogre Ogre's).
 const ENDING_MOVIE := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 17, 4, 14]
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
-const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE"]
+const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE", "TEKKEN BALL MODE"]
+var ball_kind := 0
 const Save := preload("res://scripts/core/save.gd")
 const NamcoScreen := preload("res://scripts/menu/namco_screen.gd")
 const Exe := preload("res://scripts/core/exe.gd")
@@ -69,7 +70,7 @@ func _title() -> void:
 	music.play_track("title")
 	var title := Title.new()
 	title.chosen.connect(_mode)
-	title.entered.connect(func(): music.play_song(0))
+	title.entered.connect(func(): music.play_track("none"))
 	title.idle.connect(_attract)
 	_swap(title)
 func _attract() -> void:
@@ -91,7 +92,7 @@ func _mode(item: String) -> void:
 		get_tree().quit()
 	elif item == "THEATER MODE":
 		_theater_menu(0)
-	elif item == "TEKKEN BALL MODE" or item == "TEKKEN FORCE MODE":
+	elif item == "TEKKEN FORCE MODE":
 		_summary([item, "NOT AVAILABLE YET"], _title)
 	elif item == "OPTION MODE":
 		var options := OptionsScreen.new()
@@ -105,7 +106,7 @@ func _mode(item: String) -> void:
 func _select() -> void:
 	music.play_track("select")
 	var select := CharacterSelect.new()
-	select.solo = mode in ["ARCADE MODE", "TIME ATTACK MODE", "SURVIVAL MODE"]
+	select.solo = mode in ["ARCADE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "TEKKEN BALL MODE"]
 	select.chosen.connect(_start_fight)
 	_swap(select)
 func _model_for(character: int, variant: int = 0) -> int:
@@ -155,6 +156,8 @@ func _start_fight(first: int, second: int) -> void:
 			_fight(first, second, true)
 		"PRACTICE MODE":
 			_fight(first, second, false, true)
+		"TEKKEN BALL MODE":
+			_fight(first, _random_opponent(), false, false, {"ball": ball_kind})
 		"SURVIVAL MODE":
 			_fight(first, _random_opponent(), false, false, {"rounds": 1})
 		_:
