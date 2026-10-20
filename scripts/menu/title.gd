@@ -38,9 +38,12 @@ func _refresh() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("menu_down"):
 		selected = (selected + 1) % ITEMS.size()
+		blip(BLIP_CURSOR)
 		_refresh()
 	elif event.is_action_pressed("menu_up"):
 		selected = (selected - 1 + ITEMS.size()) % ITEMS.size()
+		blip(BLIP_CURSOR)
 		_refresh()
 	elif event.is_action_pressed("menu_confirm") or event.is_action_pressed("menu_start"):
+		blip(BLIP_CONFIRM)
 		chosen.emit(ITEMS[selected])

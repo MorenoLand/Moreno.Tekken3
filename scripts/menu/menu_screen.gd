@@ -3,7 +3,18 @@ const Tim := preload("res://scripts/fighter/tim.gd")
 const BNS := "res://assets/bns/"
 const PIXEL_ASPECT := 640.0 / 368.0
 var screen := Control.new()
+const Sfx := preload("res://scripts/fight/sfx.gd")
+const BLIP_START := [0x4007, 0.4]
+const BLIP_CURSOR := [0x4035, 0.44]
+const BLIP_CONFIRM := [0x4034, 0.31]
 var cache := {}
+var blips
+func blip(kind: Array) -> void:
+	if blips == null:
+		blips = Sfx.new()
+		add_child(blips)
+		blips.pool(4)
+	blips.play_entry(0, kind[0], kind[1])
 func _enter_tree() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR

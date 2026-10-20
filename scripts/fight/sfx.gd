@@ -6,7 +6,9 @@ var tones := {}
 var streams := {}
 func setup(ids: Array) -> void:
 	models = ids
-	for i in 12:
+	pool(12)
+func pool(count: int) -> void:
+	for i in count:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
 		voices.append(p)
@@ -21,7 +23,7 @@ func _stream(path: String) -> AudioStreamWAV:
 	if not streams.has(path):
 		streams[path] = AudioStreamWAV.load_from_file(ProjectSettings.globalize_path(path)) if FileAccess.file_exists(path) else null
 	return streams[path]
-func play_entry(player: int, entry: int) -> void:
+func play_entry(player: int, entry: int, gain: float = -1.0) -> void:
 	var bank: int = (entry >> 14) & 3
 	if bank == 0:
 		return
@@ -40,7 +42,7 @@ func play_entry(player: int, entry: int) -> void:
 				if not v.playing:
 					v.stream = stream
 					v.pitch_scale = clampf(pow(2.0, (note - int(tone["center"]) + int(tone["shift"]) / 128.0) / 12.0), 0.05, 8.0)
-					v.volume_db = linear_to_db(LEVELS[(entry >> 6) & 15] / 127.0 * int(tone["vol"]) / 127.0)
+					v.volume_db = linear_to_db(LEVELS[(entry >> 6) & 15] / 127.0 * int(tone["vol"]) / 127.0 if gain < 0.0 else gain)
 					v.play()
 					return
 			return

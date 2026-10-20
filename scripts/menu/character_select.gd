@@ -67,8 +67,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				step = d[1]
 		if step != Vector2i.ZERO:
 			cursor[p] = Vector2i((cursor[p].x + step.x + 10) % 10, (cursor[p].y + step.y + 2) % 2)
+			blip(BLIP_CURSOR)
 			_refresh()
 		if event.is_action_pressed("p%d_lk" % (p + 1)):
 			locked[p] = true
+			blip(BLIP_CONFIRM)
 	if locked[0] and locked[1]:
 		chosen.emit(GRID[cursor[0].y][cursor[0].x], GRID[cursor[1].y][cursor[1].x])
