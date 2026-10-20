@@ -213,7 +213,7 @@ func _run(mesh: Dictionary, pose: Array) -> Array:
 	return t0.slice(0, pos)
 func set_frame(frame_index: int) -> void:
 	var pose: PackedInt32Array = motion.frame(stream_bytes, stream_start, frame_index)
-	var world: Dictionary = skeleton.world(model, pose, root_matrix, [0, 0, 0])
+	var world: Dictionary = skeleton.world(model, pose, root_matrix, [pose[0], pose[1], pose[2]])
 	for mesh in meshes:
 		var slot: int = Skeleton.PART_SLOTS[mesh["part"]]
 		var verts := _run(mesh, world[slot])
