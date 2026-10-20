@@ -185,6 +185,8 @@ func _pause_refresh() -> void:
 func continue_scene() -> void:
 	paused = true
 	orbit = 0.0
+	camera.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+	stage_node.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	fighters[1].visible = false
 	hud.say("", 0)
 	hud.say("", 1)
@@ -201,25 +203,21 @@ func _process(delta: float) -> void:
 		hud.size = size
 	if orbit >= 0.0:
 		_orbit(delta)
+# One simulation tick per physics frame (60 Hz); fighters, stage and camera are physics-interpolated,
+# so the picture stays smooth whatever the display refresh rate is.
+func _physics_process(_delta: float) -> void:
+	if orbit >= 0.0 or sim == null or paused:
 		return
-	if sim == null or paused:
-		return
-	clock += delta
-	var stepped := false
-	while clock >= TICK:
-		clock -= TICK
-		for p in 2:
-			var bits := _pad(p)
-			sim.pads[p] = bits
-			sim.edges[p] = bits & ~previous[p] & 0xf0
-			previous[p] = bits
-		sim.tick()
-		stepped = true
-		_banner()
-		_sound()
-		_sparks()
-	if stepped:
-		_present()
+	for p in 2:
+		var bits := _pad(p)
+		sim.pads[p] = bits
+		sim.edges[p] = bits & ~previous[p] & 0xf0
+		previous[p] = bits
+	sim.tick()
+	_banner()
+	_sound()
+	_sparks()
+	_present()
 func _sparks() -> void:
 	for hit in Hits.impacts:
 		var victim: int = hit[3]

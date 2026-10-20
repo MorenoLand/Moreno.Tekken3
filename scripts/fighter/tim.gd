@@ -41,8 +41,11 @@ static func compose_vram(tims: Array, page_y: int = 0) -> PackedInt32Array:
 				for c in cr[2]:
 					vram[(504 + cr[1] + r) * 1024 + cr[0] + c] = t["clut"][r * cr[2] + c]
 	return vram
+# PS1 palette entries with bit 15 set are drawn semi-transparent when the primitive allows it;
+# semi_alpha lets a caller that draws such primitives (portraits) keep that distinction.
+static var semi_alpha := 1.0
 static func _rgba(c: int) -> Color:
-	return Color8((c & 31) * 255 / 31, (c >> 5 & 31) * 255 / 31, (c >> 10 & 31) * 255 / 31, 0 if c == 0 else 255)
+	return Color8((c & 31) * 255 / 31, (c >> 5 & 31) * 255 / 31, (c >> 10 & 31) * 255 / 31, 0 if c == 0 else (int(semi_alpha * 255) if c & 0x8000 else 255))
 static func decode_page(vram: PackedInt32Array, page: int, clut: int) -> Image:
 	var tpage := page + 6
 	var px := (tpage & 15) * 64

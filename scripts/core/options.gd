@@ -1,6 +1,6 @@
 extends RefCounted
 const PATH := "user://options.cfg"
-const DEFAULTS := {"difficulty": 1, "fights": 1, "time": 2, "guard": 1, "change": 1, "hold": 1, "quick": 1, "speaker": 0, "bgm": 1, "music": 100, "sfx": 100, "vibration": 1}
+const DEFAULTS := {"difficulty": 1, "fights": 1, "time": 2, "guard": 1, "change": 1, "hold": 1, "quick": 1, "speaker": 0, "bgm": 0, "music": 100, "sfx": 100, "vibration": 1}
 const TIMES := [60, 50, 40, 30, 20]
 static var values := {}
 static var keys := {}

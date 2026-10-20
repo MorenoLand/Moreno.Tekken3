@@ -97,7 +97,11 @@ func _panel(p: int, exe) -> void:
 	var origin: Vector2 = PANEL_POSITION[p]
 	holder.add_child(_gradient(origin, Vector2(126, 106), Color.BLACK, Color.BLACK, rgb, rgb, true))
 	holder.add_child(_gradient(origin + Vector2(0, 106), Vector2(126, 106), rgb, rgb, Color8(0xc0, 0xc0, 0xc0), Color8(0xc0, 0xc0, 0xc0), true))
+	Tim.semi_alpha = 1.0
 	var image := Tim.to_image(FileAccess.get_file_as_bytes("%s009/p%02d.tim" % [BNS, first_roster if p == 0 else second_roster]), 4)
+	Tim.semi_alpha = 1.0
+	if p == 1:
+		image.flip_x()
 	var portrait := TextureRect.new()
 	portrait.texture = ImageTexture.create_from_image(image.get_region(Rect2i(0, 20, 126, 212)))
 	portrait.position = origin

@@ -133,19 +133,24 @@ func _dynamic(kind: String) -> void:
 				holder.add_child(tag)
 				screen.add_child(holder)
 				cursors.append(holder)
-func _portrait_image(roster: int) -> ImageTexture:
-	var key := Vector2i(roster, 99)
+func _portrait_image(roster: int, silhouette: bool, mirrored: bool) -> ImageTexture:
+	var key := Vector3i(roster, 99, (1 if silhouette else 0) + (2 if mirrored else 0))
 	if not cache.has(key):
+		Tim.semi_alpha = 1.0
 		var image := Tim.to_image(FileAccess.get_file_as_bytes(BNS + "009/p%02d.tim" % roster), 4)
+		Tim.semi_alpha = 1.0
 		for y in image.get_height():
 			var shade := 1.0
-			if y < 60:
-				shade = y / 60.0
+			var cover := 1.0
+			if silhouette and y < 30:
+				cover = y / 30.0
 			elif y > 206:
-				shade = lerpf(1.0, 0.0, (y - 206) / 46.0)
+				shade = lerpf(1.0, 0.06, (y - 206) / 46.0)
 			for x in image.get_width():
 				var c := image.get_pixel(x, y)
-				image.set_pixel(x, y, Color(c.r, c.g, c.b, c.a * shade))
+				image.set_pixel(x, y, Color(c.r * shade, c.g * shade, c.b * shade, c.a * cover))
+		if mirrored:
+			image.flip_x()
 		cache[key] = ImageTexture.create_from_image(image)
 	return cache[key]
 func _fit_name(p: int, roster: int) -> void:
@@ -168,13 +173,13 @@ func _refresh() -> void:
 		if shown[p] != roster:
 			shown[p] = roster
 			fade[p] = 0.0
-			portraits[p].texture = _portrait_image(SILHOUETTE if solo and p == 1 else roster)
+			portraits[p].texture = _portrait_image(SILHOUETTE if solo and p == 1 else roster, solo and p == 1, p == 0)
 			if solo and p == 1 and portraits[p].material == null:
 				portraits[p].material = CanvasItemMaterial.new()
 				portraits[p].material.blend_mode = CanvasItemMaterial.BLEND_MODE_SUB
 			if not (solo and p == 1):
 				_fit_name(p, roster)
-		cursors[p].position = Vector2(2 + 35 * cursor[p].x, 328 + 62 * cursor[p].y)
+		cursors[p].position = Vector2(9 + 35 * cursor[p].x, 328 + 62 * cursor[p].y)
 		cursors[p].visible = not (solo and p == 1)
 		names[p].visible = not (solo and p == 1)
 func _process(delta: float) -> void:
