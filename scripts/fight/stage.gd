@@ -138,4 +138,4 @@ func follow(mid: Vector3) -> void:
 	if walls != null:
 		walls.position = Vector3(mid.x, 0.0, mid.z)
 	if ground != null:
-		ground.position = Vector3(snappedf(mid.x, CELL), 0.0, snappedf(mid.z, CELL))
+		ground.position = Vector3(snappedf(mid.x, CELL), -0.004, snappedf(mid.z, CELL))

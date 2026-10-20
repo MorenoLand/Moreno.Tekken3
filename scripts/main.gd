@@ -3,6 +3,7 @@ const Movie := preload("res://scripts/menu/movie_screen.gd")
 const Title := preload("res://scripts/menu/title.gd")
 const CharacterSelect := preload("res://scripts/menu/character_select.gd")
 const FightView := preload("res://scripts/fight/fight_view.gd")
+const VsScreen := preload("res://scripts/menu/vs_screen.gd")
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
 const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE"]
 const Save := preload("res://scripts/core/save.gd")
@@ -227,6 +228,14 @@ func _home(roster: int) -> Dictionary:
 	var record: int = exe.u32(0x80097d40 + ROSTER_TO_CHARACTER[roster] * 16)
 	return {"stage": exe.u8(record + 10), "song": exe.u8(record + 11)}
 func _fight(first: int, second: int, versus: bool = false, practice: bool = false, options: Dictionary = {}) -> void:
+	if mode == "ATTRACT":
+		_begin_fight(first, second, versus, practice, options)
+		return
+	var screen := VsScreen.new()
+	screen.setup([first, second], [ROSTER_TO_CHARACTER[first], ROSTER_TO_CHARACTER[second]], ladder if mode in ["ARCADE MODE", "TIME ATTACK MODE"] else 0)
+	_swap(screen)
+	screen.finished.connect(func(): _begin_fight(first, second, versus, practice, options))
+func _begin_fight(first: int, second: int, versus: bool, practice: bool, options: Dictionary) -> void:
 	opponent = second
 	if mode == "ARCADE MODE" or mode == "TIME ATTACK MODE":
 		options["stage"] = ladder

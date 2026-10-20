@@ -45,6 +45,8 @@ func _ready() -> void:
 	camera.position = Vector3(0, 0.9, -4.2)
 	camera.look_at_from_position(camera.position, Vector3(0, 0.8, 0))
 	camera.fov = 45
+	camera.near = 0.25
+	camera.far = 400.0
 	var light := DirectionalLight3D.new()
 	light.rotation_degrees = Vector3(-50, 25, 0)
 	viewport.add_child(light)
@@ -288,9 +290,9 @@ func _follow() -> void:
 	var right := axis
 	var forward := Vector3(right.y, 0.0, -right.x)
 	var mid := (first + second) * 0.5
-	var distance := maxf(4.4, 2.6 + gap * 0.8)
+	var distance := clampf(2.6 + gap * 0.8, 4.4, 6.4)
 	stage_node.follow(mid)
-	var target := mid + Vector3(0, 0.85, 0)
+	var target := mid + Vector3(0, 0.85 + maxf(mid.y - 0.3, 0.0) * 0.6, 0)
 	var wanted := target - forward * distance + Vector3(0, 0.2, 0)
 	camera.position = camera.position.lerp(wanted, 0.2) if camera_ready else wanted
 	camera_ready = true
