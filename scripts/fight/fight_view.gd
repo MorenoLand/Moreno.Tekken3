@@ -71,6 +71,7 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 		var arena_vram := BallView.Arena.vram()
 		stage_node.build_floor(BallView.Arena.floor_table(), arena_vram)
 		backdrop_vram = arena_vram
+		_ball_surroundings()
 	else:
 		stage_node.load_stage(stage_index)
 		stage_node.load_floor(stage_index)
@@ -372,6 +373,21 @@ func _follow() -> void:
 	camera.position = camera.position.lerp(wanted, 0.2) if camera_ready else wanted
 	camera_ready = true
 	camera.look_at(target)
+# Beyond the tiled floor and the panorama the beach arena is open sky and sand, not the neutral grey of the other stages.
+func _ball_surroundings() -> void:
+	for node in get_child(0).get_children():
+		if node is WorldEnvironment:
+			node.environment.background_color = Color(0.36, 0.56, 0.86)
+	var sand := MeshInstance3D.new()
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(800, 800)
+	sand.mesh = plane
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.8, 0.75, 0.58)
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	sand.material_override = material
+	sand.position = Vector3(0, -0.03, 0)
+	stage_node.add_child(sand)
 func _follow_ball() -> void:
 	var first: Vector3 = fighters[0].position
 	var second: Vector3 = fighters[1].position
