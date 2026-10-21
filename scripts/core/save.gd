@@ -2,8 +2,9 @@ extends RefCounted
 const PATH := "user://save.cfg"
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
 # Keys are portrait/roster ids (exe name table order).
-const LOCKED_AT_START := {16: 1, 15: 5, 17: 8, 19: 10}
-static var data := {"endings": [], "usage": {}, "time_attack": {}, "survival": 0, "clears": 0, "unlock_all": false}
+const LOCKED_AT_START := {16: 1, 15: 5, 17: 8}
+const DOCTOR_B := 19
+static var data := {"endings": [], "usage": {}, "time_attack": {}, "survival": 0, "clears": 0, "unlock_all": false, "force_keys": 0, "force_best": 0, "force_clear": false}
 static var loaded := false
 static func _load() -> void:
 	if loaded:
@@ -28,9 +29,13 @@ static func unlocked(roster: int) -> bool:
 	_load()
 	if data["unlock_all"]:
 		return true
+	if roster == DOCTOR_B:
+		return data["force_clear"]
 	var need := required(roster)
 	return need == 0 or data["endings"].size() >= need
 static func hint(roster: int) -> String:
+	if roster == DOCTOR_B:
+		return "CLEAR TEKKEN FORCE MODE"
 	return "CLEAR ARCADE WITH %d CHARACTERS" % required(roster)
 static func record_clear(character: int) -> Array:
 	_load()
@@ -63,3 +68,24 @@ static func record_survival(wins: int) -> bool:
 		save()
 		return true
 	return false
+static func force_keys() -> int:
+	_load()
+	return int(data["force_keys"])
+static func add_force_key() -> void:
+	_load()
+	data["force_keys"] = mini(int(data["force_keys"]) + 1, 3)
+	save()
+static func record_force_score(score: int) -> bool:
+	_load()
+	if score > int(data["force_best"]):
+		data["force_best"] = score
+		save()
+		return true
+	return false
+static func record_force_clear(score: int) -> bool:
+	_load()
+	var fresh: bool = not data["force_clear"]
+	data["force_clear"] = true
+	record_force_score(score)
+	save()
+	return fresh

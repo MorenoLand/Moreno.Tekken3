@@ -10,7 +10,8 @@ const BallSelect := preload("res://scripts/menu/ball_select.gd")
 # Disc movie per portrait id (oracle theater reads: Gon 18, Anna 17, Doctor B shares Yoshimitsu's, True Ogre Ogre's).
 const ENDING_MOVIE := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 17, 4, 14]
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
-const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE", "TEKKEN BALL MODE"]
+const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE", "TEKKEN BALL MODE", "TEKKEN FORCE MODE"]
+const ForceFlow := preload("res://scripts/force/force_flow.gd")
 var ball_kind := 0
 const Save := preload("res://scripts/core/save.gd")
 const NamcoScreen := preload("res://scripts/menu/namco_screen.gd")
@@ -93,8 +94,6 @@ func _mode(item: String) -> void:
 		get_tree().quit()
 	elif item == "THEATER MODE":
 		_theater_menu(0)
-	elif item == "TEKKEN FORCE MODE":
-		_summary([item, "NOT AVAILABLE YET"], _title)
 	elif item == "OPTION MODE":
 		var options := OptionsScreen.new()
 		options.done.connect(_title)
@@ -107,7 +106,7 @@ func _mode(item: String) -> void:
 func _select() -> void:
 	music.play_track("select")
 	var select := CharacterSelect.new()
-	select.solo = mode in ["ARCADE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "TEKKEN BALL MODE"]
+	select.solo = mode in ["ARCADE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "TEKKEN BALL MODE", "TEKKEN FORCE MODE"]
 	select.chosen.connect(_start_fight)
 	_swap(select)
 func _model_for(character: int, variant: int = 0) -> int:
@@ -162,6 +161,11 @@ func _start_fight(first: int, second: int) -> void:
 			pick.chosen.connect(func(kind: int): ball_kind = kind; _fight(first, _random_opponent(), false, false, {"ball": kind}))
 			pick.back.connect(_select)
 			_swap(pick)
+		"TEKKEN FORCE MODE":
+			var run := ForceFlow.new()
+			add_child(run)
+			run.done.connect(func(): run.queue_free(); _title())
+			run.begin(self, _model_for(ROSTER_TO_CHARACTER[first]), ROSTER_TO_CHARACTER[first])
 		"SURVIVAL MODE":
 			_fight(first, _random_opponent(), false, false, {"rounds": 1})
 		_:
