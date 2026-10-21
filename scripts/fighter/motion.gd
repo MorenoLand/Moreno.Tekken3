@@ -58,7 +58,13 @@ func _spline(words: Array, i: int, count: int, shift: int) -> int:
 	if start != 0 and end != last:
 		acc += carry
 	return (_s32(acc + mul * (v6 - v5)) >> 16) + v5
+# A move row whose id the character does not own points at stray data (the original plays whatever is there);
+# an out-of-range stream is shown as the neutral pose instead.
 func frame(stream: PackedByteArray, start: int, frame_index: int) -> PackedInt32Array:
+	if start < 0 or start + 50 >= stream.size():
+		var blank := PackedInt32Array()
+		blank.resize(CHANNELS)
+		return blank
 	var count := stream[start]
 	var f := clampi(frame_index, 0, count - 1)
 	var desc := PackedInt32Array([stream[start + 1]])

@@ -11,9 +11,16 @@ const REACTION_IDS_A := 0x8001075c
 const REACTION_IDS_B := 0x8001075e
 const REACTION_IDS_C := 0x80019d2c
 const RISE_TABLE := 0x8001a630
+const ROW_SIZE := 0x38
+# Ids that neither fighter owns point at the 0x38 bytes before the first row (table entry 0x3fffffff); the standing
+# row stands in for them so stray data is never played (OPEN: the original reads that data as a row).
 static func slot_row(ram, a: int, id: int) -> int:
 	var data: int = ram.u32(0x800adc20 + ram.s16(a + 0x12) * 4)
-	return ram.u32(ram.u32(data + 0xc) + ((id << 16) >> 14))
+	var table: int = ram.u32(data + 0xc)
+	var found: int = ram.u32(table + ((id << 16) >> 14))
+	if found == ram.u32(data + 8) - ROW_SIZE:
+		return ram.u32(table + 3 * 4)
+	return found
 static func distance_entry(ram, p: int, q: int) -> int:
 	if p > 1:
 		p = 1 << (p - 1)
@@ -1042,8 +1049,8 @@ static func choose_next(ram, a: int) -> void:
 			set_stand(ram, a, b)
 			ram.w8(a + 0xb7, 1)
 	if ram.s16(a + 0x19a) == 0x21:
-		ram.w8(a + 0x84, ram.u8(b + 0x1e))
-		ram.w8(b + 0x84, ram.u8(a + 0x1e))
+		ram.w8(a + 0x21, ram.u8(b + 0x1e))
+		ram.w8(b + 0x21, ram.u8(a + 0x1e))
 		ram.w8(b + 0xc4, 1)
 		ram.w8(a + 0xc4, 1)
 static func opponent_index(ram, a: int) -> int:

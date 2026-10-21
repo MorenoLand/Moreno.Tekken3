@@ -94,7 +94,7 @@ static func apply_flags(ram, a: int, rec: int) -> void:
 	ram.w8(a + 0xcf, ram.u8(rec + 0x22))
 	ram.w8(a + 0xd0, ram.u8(rec + 0x24))
 	ram.w8(a + 0xd3, ram.u8(rec + 0x25))
-	ram.w8(a + 0x88, ram.u8(rec + 0x20))
+	ram.w8(a + 0x22, ram.u8(rec + 0x20))
 static func reaction_table(ram, a: int, attacker: int) -> void:
 	if ram.u8(0x800afa88) == 7 and ram.u8(0x800b668c) != 0:
 		var kind: int = ram.u16(ram.u32(0x800ac394) + 0x32)
