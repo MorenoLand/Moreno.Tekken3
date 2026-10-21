@@ -74,6 +74,8 @@ func start(player_model: int, stage: int, time: int, score: int, keys: int) -> v
 	fighters[0] = _make_fighter(player_model, FileAccess.get_file_as_bytes("%s%03d.bin" % [BNS, player_model + 3]))
 	_enemy_changed(0, sim.model_id_for_costume(Sim.Data.FIRST_ENEMY_COSTUME))
 	_enemy_changed(1, sim.model_id_for_costume(Sim.Data.FIRST_ENEMY_COSTUME))
+	if sim.final:
+		_boss_started(sim.model_id_for_costume(Sim.FINAL_BOSS * 4), Sim.FINAL_BOSS)
 	sfx = Sfx.new()
 	add_child(sfx)
 	sfx.setup([player_model, sim.model_id_for_costume(Sim.Data.FIRST_ENEMY_COSTUME), sim.model_id_for_costume(Sim.Data.FIRST_ENEMY_COSTUME)])

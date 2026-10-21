@@ -13,6 +13,7 @@ const AI_STAGE_LEVEL := [0, 3, 4, 5, 5]
 const BOSS_LISTS := 0x800b6378
 const TIME_CAP := 0x1734
 const DEAD := 6
+const FINAL_BOSS := 19
 enum Mode {PLAY, WAIT, CLEAR_WAIT, LOADING, BOSS, TALLY, FINAL, ENDED}
 enum Slot {INIT, FREE, LOAD, WAIT, READY, ALIVE, DYING, FADE}
 signal enemy_changed(slot: int, model_id: int)
@@ -93,7 +94,12 @@ func setup_force(exe: PackedByteArray, common: PackedByteArray, player_id: int, 
 	models = [_file("%s%03d.3dmk" % [BNS, player_id]), soldier_model, soldier_model]
 	MoveData.place(ram, 2, common)
 	MoveData.place(ram, 0, _file("%s%03d.bin" % [BNS, player_id + 3]))
-	MoveData.place(ram, 1, _file("%s%03d.bin" % [BNS, SOLDIER_DATA]))
+	var enemy_data := SOLDIER_DATA
+	if final:
+		enemy_data = model_id_for_costume(FINAL_BOSS * 4) + 3
+		models[1] = _file("%s%03d.3dmk" % [BNS, enemy_data - 3])
+		models[2] = models[1]
+	MoveData.place(ram, 1, _file("%s%03d.bin" % [BNS, enemy_data]))
 	MoveData.relocate(ram, 2)
 	MoveData.relocate(ram, 0)
 	MoveData.relocate(ram, 1)
@@ -944,20 +950,15 @@ func _final_setup() -> void:
 	set_camera_mode(1)
 	boss_active = true
 	var a := actor(1)
-	var choice := Vector2i(19, 0)
-	var costume: int = choice.x * 4 + choice.y
+	var costume: int = FINAL_BOSS * 4
 	var mid: int = model_id_for_costume(costume)
 	boss_song = ram.u8(ram.u32(0x80097d40 + costume * 4) + 11)
-	MoveData.place(ram, 1, _file("%s%03d.bin" % [BNS, mid + 3]))
-	MoveData.relocate(ram, 1)
-	MoveData.merge_tables(ram)
 	_set_costume(a, costume)
-	models[1] = _file("%s%03d.3dmk" % [BNS, mid])
 	var scale: int = (models[1].decode_u32(4) << 12) / 100
 	ram.w16(a + 0x4ec, scale)
 	ram.w16(a + 0x4ee, scale)
 	secondary.setup(a, (mid - 71) / 4, models[1])
-	boss_started.emit(mid, choice.x)
+	boss_started.emit(mid, FINAL_BOSS)
 	_ai_enemy(1)
 	slots[0]["state"] = Slot.ALIVE
 	slots[0]["level"] = 4
