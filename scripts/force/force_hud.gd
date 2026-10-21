@@ -2,8 +2,10 @@ extends "res://scripts/menu/menu_screen.gd"
 const Exe := preload("res://scripts/core/exe.gd")
 const GameFont := preload("res://scripts/menu/font.gd")
 const Save := preload("res://scripts/core/save.gd")
-const BAR_X := [10.0, 326.0]
-const BAR_WIDTHS := [155.0, 32.0]
+var BAR_X := [10.0, 326.0]
+var BAR_WIDTHS := [155.0, 32.0]
+const SEGMENTS := [Color(0.2, 0.4, 0.75), Color(0.3, 0.65, 0.3), Color(0.8, 0.75, 0.2), Color(0.75, 0.2, 0.1)]
+var stage_index := 0
 const BAR_Y := 42.0
 const BAR_HEIGHT := 20.0
 var sim
@@ -31,6 +33,9 @@ var hi_label := TextureRect.new()
 var track_end := 30720
 func _ready() -> void:
 	get_child(0).queue_free()
+	if stage_index >= 4:
+		BAR_X[1] = 203.0
+		BAR_WIDTHS[1] = 155.0
 	font = GameFont.new(Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02")), BNS + "010/")
 	digit_texture = tim_texture(BNS + "010/p03.tim")
 	var tims := []
@@ -81,6 +86,12 @@ func _ready() -> void:
 	track.position = Vector2(65, 437)
 	track.size = Vector2(238, 15)
 	screen.add_child(track)
+	for i in mini(stage_index, 4):
+		var done := ColorRect.new()
+		done.color = SEGMENTS[i]
+		done.position = Vector2(65 + 60 * i, 437)
+		done.size = Vector2(60 if i < 3 else 58, 15)
+		screen.add_child(done)
 	for x in [123, 183, 243]:
 		var divider := ColorRect.new()
 		divider.color = Color(0.85, 0.85, 0.85)
@@ -172,7 +183,7 @@ func refresh(target_actor: int) -> void:
 	var e := target_actor
 	_place(fills[1], 1, float(sim.ram.u32(e + 0x3f4)) / maxf(float(sim.ram.u32(e + 0x3f8)), 1.0))
 	_place(losses[1], 1, 1.0)
-	marker.position.x = 62.0 + 238.0 * clampf(float(sim.progress()) / track_end, 0.0, 1.0)
+	marker.position.x = 303.0 if stage_index >= 4 else 62.0 + 60.0 * stage_index + 60.0 * clampf(float(sim.progress()) / track_end, 0.0, 1.0)
 	var seconds: int = clampi((sim.time_left + 59) / 60, 0, 99)
 	if seconds != last_seconds:
 		last_seconds = seconds

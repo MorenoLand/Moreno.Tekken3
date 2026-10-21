@@ -82,6 +82,7 @@ func start(player_model: int, stage: int, time: int, score: int, keys: int) -> v
 	hud = Hud.new()
 	hud.sim = sim
 	hud.camera = camera
+	hud.stage_index = stage
 	if not sim.script_entries.is_empty():
 		hud.track_end = maxi(int(sim.script_entries.back()["at"]), 1)
 	add_child(hud)
@@ -125,8 +126,9 @@ const SCREEN_DISTANCE := 100.0
 var pano_material: StandardMaterial3D
 var pano_pixels := 1024
 func _build_ground(stage: int) -> void:
-	var table := FileAccess.get_file_as_bytes(sim.data.record(stage) + "01.bin")
-	var vram := Tim.compose_absolute(sim.data.tile_images(stage))
+	var source := 0 if stage >= Sim.Data.FINAL_STAGE else stage
+	var table := FileAccess.get_file_as_bytes(sim.data.record(source) + "01.bin")
+	var vram := Tim.compose_absolute(sim.data.tile_images(source))
 	var atlas := Image.create(GRID * 64, GRID * 64, false, Image.FORMAT_RGBA8)
 	for c in GRID * GRID:
 		var w0 := table.decode_u32(4 + c * 8)
@@ -155,6 +157,8 @@ func _build_ground(stage: int) -> void:
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	if stage >= Sim.Data.FINAL_STAGE:
+		mat.albedo_color = Color(0.5, 0.5, 0.5)
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts
@@ -167,6 +171,8 @@ func _build_ground(stage: int) -> void:
 	viewport.add_child(floor_node)
 func _build_floor(stage: int) -> void:
 	_build_ground(stage)
+	if stage >= Sim.Data.FINAL_STAGE:
+		return
 	var map: Dictionary = sim.data.floor_map(stage)
 	var vram := Tim.compose_absolute(sim.data.tile_images(stage))
 	var w: int = map["w"]

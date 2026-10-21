@@ -14,12 +14,12 @@ var stage := 0
 var time := 0
 var score := 0
 var view
-func begin(main_node, model_id: int, character_index: int, roster_index: int) -> void:
+func begin(main_node, model_id: int, character_index: int, roster_index: int, first_stage: int = 0) -> void:
 	roster = roster_index
 	host = main_node
 	player_model = model_id
 	character = character_index
-	stage = 0
+	stage = first_stage
 	time = 0
 	score = 0
 	_stage()
