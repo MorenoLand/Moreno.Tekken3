@@ -25,6 +25,20 @@ var fade := [1.0, 1.0]
 var countdown := float(SELECT_SECONDS)
 var coin := TextureRect.new()
 var elapsed := 0.0
+# The original redraws this screen at 30 Hz: the steel background scrolls up 8 px per frame (8 tiles, 512 px
+# period) and thin light streaks rise 16 px per frame, fading out, while the 1P tags pulse.
+const FRAME := 1.0 / 30.0
+const TILE_PAGE := 536
+const SCROLL_PER_FRAME := 8.0
+const STREAK_PER_FRAME := 16.0
+var tile_rows := {}
+var strips: Array = []
+var scroll := 0.0
+var streak_layer: Control
+var streaks: Array = []
+var streak_clock := 0.0
+var frame_clock := 0.0
+var tags: Array = []
 func _ready() -> void:
 	var tims := []
 	for spec in [["000", 7], ["009", 70], ["010", 110]]:
@@ -37,15 +51,93 @@ func _ready() -> void:
 	vram = Tim.compose_absolute(tims)
 	font = GameFont.new(Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02")), BNS + "010/")
 	for entry in Layout.ORDER:
+		if not (entry is String) and not (entry[0] is String) and entry[0] == TILE_PAGE:
+			tile_rows[entry[1]] = tile_rows.get(entry[1], {})
+			tile_rows[entry[1]][entry[2]] = entry
+	var built := false
+	var streaked := false
+	for entry in Layout.ORDER:
 		if entry is String:
 			_dynamic(entry)
 		elif entry[0] is String:
+			if entry[0] == "poly" and entry[4] - entry[2] == 1 and entry[5] - entry[3] == 160:
+				if not streaked:
+					streaked = true
+					streak_layer = Control.new()
+					screen.add_child(streak_layer)
+				continue
 			_static_shape(entry)
+		elif entry[0] == TILE_PAGE:
+			if not built:
+				built = true
+				_build_scroll()
 		else:
 			_piece(entry[0], Vector2(entry[1], entry[2]), Vector2(entry[3], entry[4]), Vector2i(entry[5], entry[6]), entry[7])
 	for p in 2:
 		_fit_name(p, GRID[cursor[p].y][cursor[p].x])
 	_refresh()
+func _build_scroll() -> void:
+	var clip := Control.new()
+	clip.position = Vector2(0, 20)
+	clip.size = Vector2(368, 440)
+	clip.clip_contents = true
+	screen.add_child(clip)
+	for x in tile_rows:
+		var rows: Dictionary = tile_rows[x]
+		var width: int = rows[76][3]
+		var top: Array = rows[20]
+		var sequence := [
+			[top[5] - 48 if x != 0 else top[5] - 48, 64, 31974],
+			[top[5], 64, top[7]],
+			[top[5], 64, top[7]],
+			[rows[76][5], rows[76][6], rows[76][7]],
+			[rows[140][5], rows[140][6], rows[140][7]],
+			[rows[204][5], rows[204][6], rows[204][7]],
+			[rows[268][5], rows[268][6], rows[268][7]],
+			[rows[332][5], rows[332][6], rows[332][7]]]
+		var image := Image.create(width, 64 * 8 * 3, false, Image.FORMAT_RGBA8)
+		for rep in 3:
+			for i in 8:
+				var tile: Array = sequence[i]
+				image.blit_rect(Tim.decode_region(vram, TILE_PAGE, tile[2], Rect2i(tile[0], tile[1], width, 64)), Rect2i(0, 0, width, 64), Vector2i(0, (rep * 8 + i) * 64))
+		var strip := TextureRect.new()
+		strip.texture = ImageTexture.create_from_image(image)
+		strip.size = Vector2(width, image.get_height())
+		strip.position = Vector2(x, -136)
+		clip.add_child(strip)
+		strips.append(strip)
+func _step_frame() -> void:
+	scroll = fmod(scroll + SCROLL_PER_FRAME, 512.0)
+	for strip in strips:
+		strip.position.y = -136.0 - scroll
+	for line in streaks.duplicate():
+		line["y"] -= STREAK_PER_FRAME
+		var level: float = 0.375 * line["y"] - 18.0
+		if level <= 1.0:
+			line["node"].queue_free()
+			streaks.erase(line)
+		else:
+			line["node"].position.y = line["y"]
+			line["node"].modulate = Color(level / 128.0, level / 128.0, level / 128.0, 1.0)
+	streak_clock += 1.0
+	if streak_clock >= 4.0 and streak_layer != null:
+		streak_clock = 0.0
+		var node := TextureRect.new()
+		node.texture = _streak_texture()
+		node.size = Vector2(1, 160)
+		node.position = Vector2(40 + randi() % 290, 288)
+		node.material = CanvasItemMaterial.new()
+		node.material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		node.modulate = Color(90.0 / 128.0, 90.0 / 128.0, 90.0 / 128.0, 1.0)
+		streak_layer.add_child(node)
+		streaks.append({"node": node, "y": 288.0})
+func _streak_texture() -> ImageTexture:
+	if not cache.has("streak"):
+		var image := Image.create(1, 160, false, Image.FORMAT_RGBA8)
+		for y in 160:
+			image.set_pixel(0, y, Color(1.0, 1.0 - y / 159.0, 1.0 - y / 159.0, 1.0))
+		cache["streak"] = ImageTexture.create_from_image(image)
+	return cache["streak"]
 func _texture(tpage: int, clut: int, region: Rect2i) -> ImageTexture:
 	var key := Vector4i(tpage, clut, region.position.x * 256 + region.position.y, region.size.x * 256 + region.size.y)
 	if not cache.has(key):
@@ -131,6 +223,7 @@ func _dynamic(kind: String) -> void:
 				tag.texture = _texture(0x20e, 0x7f1e + p, Rect2i(216, 0, 20, 16))
 				tag.size = Vector2(20, 16)
 				holder.add_child(tag)
+				tags.append(tag)
 				screen.add_child(holder)
 				cursors.append(holder)
 func _portrait_image(roster: int, silhouette: bool, mirrored: bool) -> ImageTexture:
@@ -184,6 +277,12 @@ func _refresh() -> void:
 		names[p].visible = not (solo and p == 1)
 func _process(delta: float) -> void:
 	elapsed += delta
+	frame_clock += delta
+	while frame_clock >= FRAME:
+		frame_clock -= FRAME
+		_step_frame()
+	for tag in tags:
+		tag.modulate = Color.WHITE * lerpf(0.3, 1.0, absf(fmod(elapsed, 1.0) * 2.0 - 1.0))
 	for p in 2:
 		fade[p] = minf(fade[p] + delta * 5.0, 1.0)
 		portraits[p].modulate = Color(1, 1, 1, fade[p])
