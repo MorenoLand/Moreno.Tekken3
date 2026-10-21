@@ -33,6 +33,7 @@ var stage_index := 0
 var pano_rows := 5
 var intro_lines: Array = []
 var forced := -1
+var over_frames := -1
 var shown_names := ["", ""]
 func _ready() -> void:
 	if viewport != null:
@@ -65,7 +66,7 @@ func start(player_model: int, stage: int, time: int, score: int, keys: int) -> v
 	sim.enemy_changed.connect(_enemy_changed)
 	sim.boss_started.connect(_boss_started)
 	sim.stage_done.connect(func(r): stage_result.emit(r))
-	sim.game_over.connect(func(): game_over.emit())
+	sim.game_over.connect(func(): over_frames = 0)
 	sim.popup.connect(func(text, world, kind): hud.add_popup(text, world, 0x7e15 if kind == "bonus" else 0x7e12))
 	Hits.impacts.clear()
 	impact = Impact.new()
@@ -221,6 +222,13 @@ func _process(delta: float) -> void:
 		previous = bits
 		sim.tick()
 		intro += 1
+		if over_frames >= 0:
+			over_frames += 1
+			if over_frames == 1:
+				hud.banner.modulate = Color(0.9, 0.1, 0.12)
+				hud.say("GAME OVER", 200.0)
+			elif over_frames == 150:
+				game_over.emit()
 		stepped = true
 		_sound()
 		_sparks()
@@ -308,7 +316,12 @@ func _texts() -> void:
 			elif sim.final_offer:
 				rows[3] = "FINAL STAGE CHALLENGE!!"
 		hud.show_lines(rows)
-	elif intro < 120:
-		hud.show_lines(intro_lines)
+	elif sim.intro_left > 0:
+		var elapsed: int = 150 - sim.intro_left
+		hud.say(("FINAL STAGE" if sim.final else "STAGE %d" % (sim.stage + 1)) if elapsed >= 61 else "", 112.0)
+		hud.say_ready("READY?" if elapsed >= 106 else "")
 	else:
 		hud.show_lines([])
+		if over_frames < 0:
+			hud.say("")
+		hud.say_ready("")

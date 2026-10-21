@@ -216,3 +216,18 @@ func add_popup(text: String, world: Vector3, clut: int) -> void:
 	node.size = tex.get_size()
 	screen.add_child(node)
 	pops.append({"node": node, "world": world, "age": 0})
+var ready_label := TextureRect.new()
+var ready_text := ""
+func say_ready(text: String) -> void:
+	if text == ready_text:
+		return
+	ready_text = text
+	if ready_label.get_parent() == null:
+		screen.add_child(ready_label)
+	if text == "":
+		ready_label.texture = null
+		return
+	var tex: ImageTexture = font.texture(text, 2)
+	ready_label.texture = tex
+	ready_label.size = tex.get_size()
+	ready_label.position = Vector2(184 - tex.get_width() / 2.0, 228.0)

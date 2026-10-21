@@ -1,5 +1,6 @@
 extends "res://scripts/menu/vs_screen.gd"
 const NAMES := ["BACKSTREETS", "BADLANDS", "DARKNESS", "MISHIMA", "UNDERGROUND FORTRESS"]
+const CLUTS := [0x7e90, 0x7e94, 0x7e95, 0x7e91, 0x7e99]
 var place := ""
 func _ready() -> void:
 	var exe := Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02"))
@@ -16,7 +17,7 @@ func _ready() -> void:
 	screen.add_child(bar)
 	_place(font.render_clut("TEKKEN FORCE", 1, 0x7e56), Vector2(28, 42))
 	_place(font.render_clut("STAGE %d" % stage if stage < 5 else "FINAL STAGE", 1, 0x7e56), Vector2(32, 90))
-	var title: ImageTexture = font.render_clut(place, 2, 0x7e98)
+	var title: ImageTexture = font.render_clut(place, 2, CLUTS[clampi(stage - 1, 0, 4)])
 	_place(title, Vector2(184 - title.get_width() / 2.0, 140))
 	_panel(0, exe)
 	movers[0][0].position.y = 108

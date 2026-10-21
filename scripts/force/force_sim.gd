@@ -61,6 +61,7 @@ var clear_bonus_hp := 0
 var keys := 0
 var key_awarded := false
 var boss_song := 1
+var intro_left := 150
 var final_offer := false
 var player_model_id := 0
 var player_character := 0
@@ -638,7 +639,7 @@ func _score_hits(a: int) -> void:
 		score = mini(score + gain * 10, 0x5f5e0f6)
 func _control(p: int) -> void:
 	var a := actor(p)
-	var live: bool = mode != Mode.ENDED
+	var live: bool = mode != Mode.ENDED and intro_left <= 0
 	var flip: int = ram.u8(a + 0xc6)
 	var pad: int = pads[0] if p == 0 else 0
 	var edge: int = edges[0] if p == 0 else 0
@@ -651,6 +652,9 @@ func _control(p: int) -> void:
 	Pad.push(ram, a, flip, pad if live else 0, edge if live else 0)
 	MoveStep.choose_next(ram, a)
 func _logic() -> void:
+	if intro_left > 0:
+		intro_left -= 1
+		return
 	frame_unpaused += 1
 	frame += 1
 	var progress_now: int = progress()
@@ -679,7 +683,7 @@ func _logic() -> void:
 	if mode != Mode.TALLY and mode != Mode.ENDED:
 		time_left -= 1
 	time_left = mini(time_left, TIME_CAP)
-	if ram.u32(actor(0) + 0x3f4) == 0 and mode != Mode.ENDED:
+	if (ram.u32(actor(0) + 0x3f4) == 0 or time_left < 1) and mode != Mode.ENDED and mode != Mode.TALLY:
 		_player_down()
 func _player_down() -> void:
 	if ended:
