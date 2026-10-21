@@ -6,6 +6,7 @@ const FightView := preload("res://scripts/fight/fight_view.gd")
 const TheaterScreen := preload("res://scripts/menu/theater_screen.gd")
 const MusicPlayer := preload("res://scripts/menu/music_player.gd")
 const VsScreen := preload("res://scripts/menu/vs_screen.gd")
+const BallSelect := preload("res://scripts/menu/ball_select.gd")
 # Disc movie per portrait id (oracle theater reads: Gon 18, Anna 17, Doctor B shares Yoshimitsu's, True Ogre Ogre's).
 const ENDING_MOVIE := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 17, 4, 14]
 const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17, 18, 20]
@@ -157,7 +158,10 @@ func _start_fight(first: int, second: int) -> void:
 		"PRACTICE MODE":
 			_fight(first, second, false, true)
 		"TEKKEN BALL MODE":
-			_fight(first, _random_opponent(), false, false, {"ball": ball_kind})
+			var pick := BallSelect.new()
+			pick.chosen.connect(func(kind: int): ball_kind = kind; _fight(first, _random_opponent(), false, false, {"ball": kind}))
+			pick.back.connect(_select)
+			_swap(pick)
 		"SURVIVAL MODE":
 			_fight(first, _random_opponent(), false, false, {"rounds": 1})
 		_:
