@@ -332,7 +332,7 @@ func flight(a0: int, a1: int, state: int, kind: int, grav: int) -> int:
 			w32(0x6c, -0x1400)
 			put_state(2)
 			w32(0x8c, grav)
-			w32(0x130, ram.u32(BALL + 0x138))
+			w32(0x134, ram.u32(BALL + 0x138))
 			w32(0xa8, s16(0x142))
 			w32(0x7c, FMath.tdiv(s16(0x142) << 1, 3) + 0x1000)
 		else:
@@ -424,11 +424,11 @@ func in_air(a0: int, a1: int, state: int, grav: int) -> int:
 	var aux := BALL + 0x1500
 	flags = attack_test(a0, a1, aux)
 	if (flags & 7) == 0:
-		touch_body(a0, a1, state, grav)
+		flags = touch_body(a0, a1, state, grav)
 	else:
 		touch_attack(a0, a1, flags, aux, grav)
 	return flags
-func touch_body(a0: int, a1: int, state: int, grav: int) -> void:
+func touch_body(a0: int, a1: int, state: int, grav: int) -> int:
 	var flags := 0
 	if ram.u8(a0 + 0xc4) == 0 and ram.u8(a1 + 0xc4) == 0:
 		flags = body_test(a0, a1)
@@ -438,14 +438,14 @@ func touch_body(a0: int, a1: int, state: int, grav: int) -> void:
 		elif ram.u8(a0 + 0xc3) == 0:
 			flags &= 1
 	if flags == 0:
-		return
+		return 0
 	var hitter := a1
 	var other := a0
 	if (flags & 2) != 0:
 		hitter = a0
 		other = a1
 	if hitter == ram.u32(BALL + 0x130) and s16(0x140) != 0:
-		return
+		return flags
 	w16(0xac, 0)
 	w16(0xae, 0)
 	w16(0xb2, 0)
@@ -468,7 +468,7 @@ func touch_body(a0: int, a1: int, state: int, grav: int) -> void:
 			ram.w32(SOUND_COOLDOWN, 10)
 		w32(0x130, hitter)
 		w32(0x134, other)
-		return
+		return flags
 	ram.w16(GHOST + 0x5e, s16(0x140))
 	w32(0x130, hitter)
 	w32(0x134, other)
@@ -509,6 +509,7 @@ func touch_body(a0: int, a1: int, state: int, grav: int) -> void:
 		snd(0x7043)
 		if (carried > 99 or u8(0x146) == 9) and ram.s32(hitter + 0x3f4) <= (carried << 13):
 			cue(2, ram.u8(hitter + 0x1e))
+	return flags
 func bank(hitter: int, gain: int) -> void:
 	var slot: int = ram.s16(hitter + 0x12)
 	var v: int = FMath.s16(s16(0x13c + slot * 2) + gain)
@@ -721,7 +722,8 @@ func finish_motion(a0: int, a1: int, flags: int) -> void:
 			var k: int = FMath.tdiv(d, s32(0xa8) >> 8)
 			var vy: int = s32(0x7c)
 			var inner: int = (vy + k * s32(0x8c)) >> 8
-			var term: int = FMath.tdiv(vy + ((s32(0x6c) + inner) - ram.s32(target + 0x950)) * -0x100, k)
+			var numerator: int = vy + ((s32(0x6c) + inner) - ram.s32(target + 0x950)) * -0x100
+			var term: int = FMath.tdiv(numerator, k) if k != 0 else (-1 if numerator >= 0 else 1)
 			w32(0x7c, ((vy * 0xd + term * 3) * 0x100) >> 12)
 func post() -> void:
 	if s16(0xb2) == 0:
