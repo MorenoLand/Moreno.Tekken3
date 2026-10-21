@@ -1,5 +1,5 @@
 extends RefCounted
-# Computer opponent: port of FUN_80059890 and its helpers. All AI state lives in RAM at the original addresses.
+# Computer opponent port. All AI state lives in RAM at the original addresses.
 # Per slot state block S = 0x8009f318 + slot * 0x330 (slot = byte at actor + 0x1886); offsets used below are relative to S:
 #   +0x04 pad word produced this frame   +0x06 pad word of the previous frame   +0x08 pointer to the rest of a queued input sequence
 #   +0x0c move row table                 +0x10 opponent actor                   +0x14 threat zone 0..5 (from the distance bands)
@@ -232,7 +232,7 @@ func mark(pred: Callable) -> int:
 			got += 1
 	sh(0x72, h(0x72) + got)
 	return got
-func p_572a4(r: int, e: int) -> bool:
+func pick_any_reach(r: int, e: int) -> bool:
 	var f4: int = ram.u32(r + 4)
 	var f8: int = ram.u32(r + 8)
 	if not (ram.u8(r + 0x19) == 0 or (f4 & 0x80000) != 0 or (f8 & 0x200000) != 0):
@@ -242,7 +242,7 @@ func p_572a4(r: int, e: int) -> bool:
 	if ram.u8(r + 0x2d) == 0 or (f8 & 0x400000) != 0 or (f4 & 0x20000) != 0:
 		return false
 	return reach(r, w(0x14)) or (f4 & 0x10000) != 0
-func p_573f4(r: int, e: int) -> bool:
+func pick_reach_no_throw(r: int, e: int) -> bool:
 	var f4: int = ram.u32(r + 4)
 	var f8: int = ram.u32(r + 8)
 	if not (ram.u8(r + 0x19) == 0 or (f4 & 0x80000) != 0 or (f8 & 0x200000) != 0):
@@ -252,13 +252,13 @@ func p_573f4(r: int, e: int) -> bool:
 	if (f8 & 0x400000) != 0 or (f4 & 0x20000) != 0:
 		return false
 	return reach(r, w(0x14)) or (f4 & 0x10000) != 0
-func p_57538(r: int, e: int) -> bool:
+func pick_quick(r: int, e: int) -> bool:
 	var f4: int = ram.u32(r + 4)
 	var f8: int = ram.u32(r + 8)
 	if ram.s16(r + 0x14) <= 0 or ram.u8(r + 0x2d) == 0 or ram.u8(r + 0x19) != 0 or (f8 & 0x400000) != 0 or ram.u8(r + 0x2d) >= 14 or (f4 & 0x20000) != 0:
 		return false
 	return reach(r, w(0x14)) or (f4 & 0x10000) != 0
-func p_5766c(r: int, e: int) -> bool:
+func pick_by_guard_flags(r: int, e: int) -> bool:
 	var f4: int = ram.u32(r + 4)
 	var f8: int = ram.u32(r + 8)
 	if (f4 & 0x20000) != 0 or ram.u8(r + 0x2d) == 0 or (f8 & 0x400000) != 0 or ram.u8(r + 0x19) != 0 or ram.s16(r + 0x14) < 0:
@@ -274,9 +274,9 @@ func p_5766c(r: int, e: int) -> bool:
 	if s & 4:
 		return id != 0x412 and id != 0x217
 	return true
-func p_577dc(r: int, e: int) -> bool:
+func pick_by_hold_flags(r: int, e: int) -> bool:
 	return p_stance_pick(r, false)
-func p_579a0(r: int, e: int) -> bool:
+func pick_by_hold_flags_no_grab(r: int, e: int) -> bool:
 	return p_stance_pick(r, true)
 func p_stance_pick(r: int, skip_grab: bool) -> bool:
 	var f8: int = ram.u32(r + 8)
@@ -297,12 +297,12 @@ func p_stance_pick(r: int, skip_grab: bool) -> bool:
 	if s & 2:
 		return id == 0x10f or id == 0x217 or id == 0x412
 	return false
-func p_57b60(r: int, e: int) -> bool:
+func pick_plain_input(r: int, e: int) -> bool:
 	return ram.u8(r + 0x2d) != 0 and (ram.u16(e) & 0x3fe0) == 0 and (ram.u32(r + 4) & 0x20000) == 0 and ram.s16(r + 0x14) >= 0 and (ram.u32(r + 8) & 0x400000) == 0 and ram.u8(r + 0x19) == 0 and reach(r, w(0x14))
-func p_57d58(r: int, e: int) -> bool:
+func pick_fast_hit(r: int, e: int) -> bool:
 	var f4: int = ram.u32(r + 4)
 	return (ram.u32(r + 8) & 0x400000) == 0 and ram.s16(r + 0x14) > 0 and ram.u8(r + 0x2d) != 0 and (ram.u8(r + 0x19) == 0 or (f4 & 0x80000) != 0) and ram.u8(r + 0x2d) < h(0x20a) and (f4 & 0x20000) == 0 and reach(r, w(0x14))
-func p_57e94(r: int, e: int) -> bool:
+func pick_fast_hit_no_grab(r: int, e: int) -> bool:
 	return (ram.u32(r + 8) & 0x400000) == 0 and ram.s16(r + 0x14) > 0 and ram.u8(r + 0x2d) != 0 and ram.u8(r + 0x2d) < h(0x20a) and (ram.u32(r + 8) & 0xffff) != 0x412 and (ram.u32(r + 4) & 0x20000) == 0 and reach(r, w(0x14))
 func p_strike(r: int, e: int) -> bool:
 	return (ram.u32(r + 4) & 1) == 1 and ram.u8(r + 0x2d) == 0
@@ -1099,7 +1099,7 @@ func defend() -> bool:
 			sh(4, 0x2000 if ram.s16(A + 0x16) == 0x12 else 0x8000)
 			return true
 		8:
-			mark(p_572a4)
+			mark(pick_any_reach)
 		0x10:
 			mark(func(r: int, e: int) -> bool: return (ram.u32(r + 8) & 0x10000) != 0 or (ram.u32(r + 8) & 0xffff) == 0x10f)
 		0x20:
@@ -1279,7 +1279,7 @@ func reaction() -> bool:
 		if b(0x8f) != 0 or roll(0xfff) < h(0x25e):
 			var d: int = h(0x20a)
 			if d < 0x1e and d > 1:
-				var got: int = mark(p_57d58)
+				var got: int = mark(pick_fast_hit)
 				if got > 0:
 					var idx: int = pick()
 					done = true
@@ -1403,15 +1403,15 @@ func strategize(s: int) -> bool:
 			return false
 		1:
 			if h(0x20c) == 0:
-				count = mark(p_57538)
+				count = mark(pick_quick)
 			elif w(0x234) == 0x607 or w(0x234) == 0x706 or (wu(0x230) & 0x200001) != 0:
-				count = mark(p_57e94)
+				count = mark(pick_fast_hit_no_grab)
 			else:
-				count = mark(p_57d58)
+				count = mark(pick_fast_hit)
 			if w(0x234) == 0x412:
 				count += mark(func(r: int, e: int) -> bool: return ram.u8(r + 0x2d) != 0 and (ram.u32(r + 4) & 0x20001) == 1 and reach(r, w(0x14)))
 		2:
-			var n: int = pick_all_range()
+			var n: int = mark_for_grab_state()
 			if n < 1:
 				var p: int = 0
 				if ram.s16(A + 0x32) == 0:
@@ -1450,7 +1450,7 @@ func strategize(s: int) -> bool:
 	return done
 func mark_double_tap() -> int:
 	return mark(func(r: int, e: int) -> bool: return ram.s16(e) == -0x3ffe)
-func pick_all_range() -> int:
+func mark_for_grab_state() -> int:
 	var t1: int = 0
 	if w(0x1c) >= 0xb87:
 		return 0
@@ -1520,7 +1520,7 @@ func rush() -> bool:
 			var d: int = h(0x20a)
 			if d >= 29:
 				if w(0x14) < 3:
-					return mark(p_573f4) <= 0
+					return mark(pick_reach_no_throw) <= 0
 				sh(4, reset_pad())
 				sh(0x68, roll(0xf))
 				return true
@@ -1529,7 +1529,7 @@ func rush() -> bool:
 					sh(4, 0)
 					return true
 				if w(0x14) < 3:
-					if mark(p_573f4) <= 0:
+					if mark(pick_reach_no_throw) <= 0:
 						return true
 					sh(0x68, 0xffff)
 					return false
@@ -1554,7 +1554,7 @@ func rush() -> bool:
 			if h(0x20a) < 9 or w(0x14) >= 2:
 				queue_seq(0x80022c46)
 				return true
-			if mark(p_573f4) <= 0:
+			if mark(pick_reach_no_throw) <= 0:
 				return true
 			sh(0x68, 0xffff)
 			return false
@@ -1807,7 +1807,7 @@ func pick_and_go() -> bool:
 		return true
 	sw(0x60, row)
 	return true
-func f587d8() -> int:
+func mark_by_zone() -> int:
 	var got: int = 0
 	var v: int = ram.u32(RNG) >> 1 & 0xfff
 	roll(0)
@@ -1818,8 +1818,8 @@ func f587d8() -> int:
 	elif z == 3 and v < 0x400:
 		got = mark_input(-0x3fff)
 	if (wu(0x230) & 1) == 0:
-		return got + mark(p_57d58)
-	return got + mark(p_57e94)
+		return got + mark(pick_fast_hit)
+	return got + mark(pick_fast_hit_no_grab)
 func decide_low(intent: int, urge: int) -> Array:
 	var count: int = 0
 	if h(0x208) != 0 and h(0x88) == 0:
@@ -1869,9 +1869,9 @@ func decide_low(intent: int, urge: int) -> Array:
 		if w(0x14) < 4 and h(0x21a) == 0 and h(0x27e) <= roll(0xfff):
 			sh(0x68, 0xffff)
 			if ram.u8(B + 0xdb) == 0 and roll(0x3f) < 0x20 and w(0x7c) == 0:
-				count += mark(p_579a0)
+				count += mark(pick_by_hold_flags_no_grab)
 			else:
-				count += mark(p_577dc)
+				count += mark(pick_by_hold_flags)
 		return [1, count]
 	if h(0x46) > -1:
 		count = mark(p_chain)
@@ -1881,15 +1881,15 @@ func decide_low(intent: int, urge: int) -> Array:
 	if h(0x20e) != 0:
 		if b(0x8f) == 0 and roll(0xfff) >= h(0x258):
 			if intent < 1:
-				count = mark(p_573f4) if (wu(0x230) & 1) != 0 else mark(p_572a4)
+				count = mark(pick_reach_no_throw) if (wu(0x230) & 1) != 0 else mark(pick_any_reach)
 		else:
-			count = f587d8()
+			count = mark_by_zone()
 		return [1, count]
 	if (h(0x20c) != 0 or h(0x214) != 0) and h(0x88) == 0:
 		if b(0x8f) != 0 or roll(0xfff) < h(0x258):
-			count = f587d8()
+			count = mark_by_zone()
 		elif intent < 1:
-			count = mark(p_573f4) if (wu(0x230) & 1) != 0 else mark(p_572a4)
+			count = mark(pick_reach_no_throw) if (wu(0x230) & 1) != 0 else mark(pick_any_reach)
 		return [1, count]
 	if intent < 1:
 		return [1, chase(urge)]
@@ -1942,7 +1942,7 @@ func chase_free() -> int:
 	if roll(0x3f) < 0x20:
 		if roll(1) != 0:
 			return mark(p_mixup)
-		return mark(p_577dc)
+		return mark(pick_by_hold_flags)
 	if h(0x44) < 0 and h(0x46) < 0 and (wu(0x224) & 1) == 0 and ram.u8(A + 0xdb) == 0 and roll(0xfff) < 0x200:
 		count = mark(p_strike)
 		if count > 0:
@@ -1951,12 +1951,12 @@ func chase_free() -> int:
 			return count
 	count = mark(p_mixup)
 	if roll(0xfff) < h(0x250):
-		return count + mark(p_5766c)
+		return count + mark(pick_by_guard_flags)
 	if roll(0xfff) < h(0x252):
-		return count + mark(p_57538)
+		return count + mark(pick_quick)
 	if (wu(0x230) & 1) == 0 or roll(0xfff) < h(0x27e):
 		if roll(0x3f) < 10:
-			return count + mark(p_57b60)
+			return count + mark(pick_plain_input)
 		if ram.u8(A + 0xdb) == 0 and h(0x46) < 0:
 			if roll_scaled(0x1000) < 0x200:
 				count = mark(p_launch)
@@ -1968,8 +1968,8 @@ func chase_free() -> int:
 					return count
 		if roll_scaled(0x1000) < 10:
 			return count + mark(p_plain)
-		return count + mark(p_572a4)
-	return count + mark(p_573f4)
+		return count + mark(pick_any_reach)
+	return count + mark(pick_reach_no_throw)
 func default_pad() -> void:
 	if h(0x4a) < 0:
 		sh(4, 0 if h(0x48) < 0 else hu(6) & 0xf000)
@@ -2231,7 +2231,7 @@ func side_pick() -> int:
 	return 1 - s if left != 0 else s
 func row_a_now() -> int:
 	return ram.u32(A + 0x54)
-func f57018() -> bool:
+func has_vulnerable_cancel() -> bool:
 	var frame: int = ram.s16(A + 0x58)
 	var table: int = wu(0xc)
 	var found: bool = false
@@ -2272,7 +2272,7 @@ func hook_3() -> int:
 		queue_seq(0x800230de + (hw_rand() & 0xfff) % 3 * 14)
 		sh(0xd8, 1)
 		return -2
-	if (wu(0x230) & 1) != 0 and w(0x14) < 2 and ram.u8(B + 0xdf) == 0 and ram.u8(row_a_now() + 0x2d) == 0 and h(0x20a) >= 9 and ram.s16(A + 0x32) == 0 and ram.s16(A + 0x40) == 0 and f57018():
+	if (wu(0x230) & 1) != 0 and w(0x14) < 2 and ram.u8(B + 0xdf) == 0 and ram.u8(row_a_now() + 0x2d) == 0 and h(0x20a) >= 9 and ram.s16(A + 0x32) == 0 and ram.s16(A + 0x40) == 0 and has_vulnerable_cancel():
 		queue_seq(0x800230c2 + (hw_rand() & 1) * 14)
 		return -2
 	if h(0x208) == 0 or w(0x14) >= 2:
@@ -2281,7 +2281,7 @@ func hook_3() -> int:
 		return -1
 	if ram.s16(A + 0x32) != 0 or ram.u8(B + 0xdf) != 0 or ram.u8(row_a_now() + 0x2d) != 0 or h(0x20a) < 9 or h(0x88) != 0:
 		return -1
-	if not f57018():
+	if not has_vulnerable_cancel():
 		return -1
 	queue_seq(0x800230a6 + (hw_rand() & 1) * 14)
 	return -2
