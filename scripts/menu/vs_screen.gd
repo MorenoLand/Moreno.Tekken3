@@ -8,8 +8,11 @@ const COLORS := 0x800214cc
 const TILE_COLUMNS := [0, 69, 137, 206, 274, 343, 411]
 const PANEL_POSITION := [Vector2(14, 106), Vector2(228, 216)]
 const NAME_Y := [106, 390]
-const SHOW_SECONDS := 3.2
-const SLIDE_SECONDS := 0.6
+# 30 Hz like the original: black lead-in, 8 slide frames (portraits 20 px, names 29 px per frame), then the full scene.
+const FRAME := 1.0 / 30.0
+const LEAD_FRAMES := 15
+const SLIDE_FRAMES := 8
+const SHOW_SECONDS := 3.4
 var first_roster := 0
 var second_roster := 0
 var first_character := 0
@@ -18,6 +21,7 @@ var stage := 0
 var variant := 0
 var elapsed := 0.0
 var movers: Array = []
+var late: Array = []
 func setup(roster: Array, characters: Array, stage_number: int, attract: bool = false) -> void:
 	variant = 1 if attract else 0
 	first_roster = roster[0]
@@ -32,15 +36,22 @@ func _ready() -> void:
 	for n in 42:
 		tims.append_array(Tim.stream(FileAccess.get_file_as_bytes("%s%s/p%02d.tim" % [BNS, "013" if variant == 1 else "012", n])))
 	var vram := Tim.compose_absolute(tims)
+	var first_late := screen.get_child_count()
 	_tiles(vram)
+	var tile_end := screen.get_child_count()
 	if stage > 0:
 		_header(font)
+	var header_end := screen.get_child_count()
 	for p in 2:
 		_panel(p, exe)
 	for p in 2:
 		_name(p, exe, font)
 	var versus: ImageTexture = font.render_clut("VS", 2, 0x7e90)
-	_place(versus, Vector2(162, 250))
+	var vs_node := _place(versus, Vector2(162, 250))
+	for i in range(first_late, header_end):
+		late.append(screen.get_child(i))
+	late.append(vs_node)
+	_set_late(false)
 func _tiles(vram: PackedInt32Array) -> void:
 	for k in 42:
 		var clut: int = 0x7d00 + k if k < 16 else (0x7d40 + k - 16 if k < 32 else 0x7d80 + k - 32)
@@ -114,7 +125,7 @@ func _panel(p: int, exe) -> void:
 		line.size = edge.size
 		holder.add_child(line)
 	screen.add_child(holder)
-	movers.append([holder, -140.0 if p == 0 else 140.0, 0.0])
+	movers.append([holder, -140.0 if p == 0 else 140.0, 0.0, 20.0])
 func _name(p: int, exe, font) -> void:
 	var character: int = first_roster if p == 0 else second_roster
 	var text: String = exe.cstring(exe.u32(exe.u32(0x80097d40 + character * 16)))
@@ -125,13 +136,19 @@ func _name(p: int, exe, font) -> void:
 	rect.size = texture.get_size()
 	rect.position = Vector2(149 if p == 0 else 222 - width, NAME_Y[p])
 	screen.add_child(rect)
-	movers.append([rect, -260.0 if p == 0 else 260.0, rect.position.x])
+	movers.append([rect, -203.0 if p == 0 else 203.0, rect.position.x, 29.0])
+func _set_late(on: bool) -> void:
+	for node in late:
+		node.visible = on
 func _process(delta: float) -> void:
 	elapsed += delta
-	var t := minf(elapsed / SLIDE_SECONDS, 1.0)
-	var remaining := (1.0 - t) * (1.0 - t)
+	var frame: int = int(elapsed / FRAME) - LEAD_FRAMES
+	var step: int = clampi(frame, 0, SLIDE_FRAMES - 1)
 	for m in movers:
-		m[0].position.x = m[2] + m[1] * remaining
+		var distance: float = m[3] * (SLIDE_FRAMES - 1 - step)
+		m[0].position.x = m[2] + (-distance if m[1] < 0.0 else distance)
+		m[0].visible = frame >= 0
+	_set_late(frame >= SLIDE_FRAMES - 1)
 	if elapsed > SHOW_SECONDS:
 		set_process(false)
 		finished.emit()
