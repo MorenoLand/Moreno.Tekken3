@@ -21,7 +21,7 @@ Then open the folder with Redot 26.2 and run the main scene (title, character se
 
 ## Playing
 
-Run the main scene. The intro movie leads to the title menu: arcade (ten fights), VS, team battle, time attack, survival, practice, theater and option modes. Tekken Force (four side-scrolling stages with a boss each, keys and the final stage that unlocks Doctor B) is playable from the title menu.
+Run the main scene. The intro movie leads to the title menu: arcade (ten fights), VS, team battle, time attack, survival, practice, theater and option modes. Tekken Ball (the ball physics, hit rules and beach arena) and Tekken Force (four side-scrolling stages with a boss each, keys and the final stage that unlocks Doctor B) are playable from the title menu.
 
 Default keys, both remappable under Option Mode, Key Configuration (a controller works out of the box, the d-pad or left stick moves, X / Y / A / B are the four attack buttons, Start or Esc pauses, with Cancel / Command / Reset):
 
