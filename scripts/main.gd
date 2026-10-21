@@ -165,7 +165,7 @@ func _start_fight(first: int, second: int) -> void:
 			var run := ForceFlow.new()
 			add_child(run)
 			run.done.connect(func(): run.queue_free(); _title())
-			run.begin(self, _model_for(ROSTER_TO_CHARACTER[first]), ROSTER_TO_CHARACTER[first])
+			run.begin(self, _model_for(ROSTER_TO_CHARACTER[first]), ROSTER_TO_CHARACTER[first], first)
 		"SURVIVAL MODE":
 			_fight(first, _random_opponent(), false, false, {"rounds": 1})
 		_:

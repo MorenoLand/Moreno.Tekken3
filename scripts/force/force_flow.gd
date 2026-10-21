@@ -1,19 +1,21 @@
 extends Node
 # Runs a Tekken Force attempt: stage after stage, the key and final stage rules, scores and the save updates.
 const View := preload("res://scripts/force/force_view.gd")
+const Intro := preload("res://scripts/force/force_intro.gd")
 const Save := preload("res://scripts/core/save.gd")
 const Options := preload("res://scripts/core/options.gd")
 const Exe := preload("res://scripts/core/exe.gd")
-const NAMES := ["UNDERGROUND FORTRESS", "MISHIMA", "DARKNESS", "BADLANDS", "BACKSTREETS"]
 signal done
 var host
 var player_model := 0
 var character := 0
+var roster := 0
 var stage := 0
 var time := 0
 var score := 0
 var view
-func begin(main_node, model_id: int, character_index: int) -> void:
+func begin(main_node, model_id: int, character_index: int, roster_index: int) -> void:
+	roster = roster_index
 	host = main_node
 	player_model = model_id
 	character = character_index
@@ -22,6 +24,13 @@ func begin(main_node, model_id: int, character_index: int) -> void:
 	score = 0
 	_stage()
 func _stage() -> void:
+	var intro := Intro.new()
+	intro.setup([roster, roster], [character, character], mini(stage + 1, 5))
+	intro.place = Intro.NAMES[stage]
+	host._swap(intro)
+	host.music.play_song(_stage_song())
+	intro.finished.connect(_play)
+func _play() -> void:
 	view = View.new()
 	host._swap(view)
 	view.stage_result.connect(_cleared)
@@ -30,7 +39,6 @@ func _stage() -> void:
 	view.music.connect(func(song): host.music.play_song(song))
 	host.music.play_song(_stage_song())
 	view.start(player_model, stage, time, score, Save.force_keys())
-	view.banner(stage, NAMES[stage])
 func _stage_song() -> int:
 	if stage >= 4:
 		return 0x19
