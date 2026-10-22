@@ -1,5 +1,7 @@
 # Tekken 3
 
+> **Work in progress.** Not every mode and screen is finished yet.
+
 A native Redot / Godot port of Tekken 3 (PS1, USA, SLUS-00402), built from the game's own data and logic. It needs your own disc image; no game data is in this repository.
 
 ## Goals
