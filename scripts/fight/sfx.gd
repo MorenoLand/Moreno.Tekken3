@@ -24,7 +24,7 @@ func _tones(folder: String) -> Array:
 	return tones[folder]
 func _stream(path: String) -> AudioStreamWAV:
 	if not streams.has(path):
-		streams[path] = AudioStreamWAV.load_from_file(ProjectSettings.globalize_path(path)) if FileAccess.file_exists(path) else null
+		streams[path] = AudioStreamWAV.load_from_buffer(FileAccess.get_file_as_bytes(path)) if FileAccess.file_exists(path) else null
 	return streams[path]
 func play_entry(player: int, entry: int, gain: float = -1.0) -> void:
 	var bank: int = (entry >> 14) & 3

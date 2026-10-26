@@ -1,4 +1,5 @@
 extends Control
+const Pack := preload("res://scripts/core/asset_pack.gd")
 const Movie := preload("res://scripts/menu/movie_screen.gd")
 const Title := preload("res://scripts/menu/title.gd")
 const CharacterSelect := preload("res://scripts/menu/character_select.gd")
@@ -45,7 +46,10 @@ func _ready() -> void:
 	add_child(music)
 	get_viewport().size_changed.connect(_aspect)
 	_aspect()
-	_intro()
+	var pack := Pack.new()
+	holder.add_child(pack)
+	pack.ready_to_run.connect(func(): pack.queue_free(); _intro())
+	pack.start()
 func _aspect() -> void:
 	var window := get_viewport().get_visible_rect().size
 	holder.ratio = window.x / window.y if widescreen else 4.0 / 3.0

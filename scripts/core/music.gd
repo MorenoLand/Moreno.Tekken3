@@ -59,7 +59,7 @@ func _play(path: String, gain: float) -> void:
 	if path == "" or not FileAccess.file_exists(path):
 		stop()
 		return
-	var ogg := AudioStreamOggVorbis.load_from_file(ProjectSettings.globalize_path(path))
+	var ogg := AudioStreamOggVorbis.load_from_buffer(FileAccess.get_file_as_bytes(path))
 	ogg.loop = true
 	stream = ogg
 	volume_db = linear_to_db(maxf(gain * Options.get_value("music") / 100.0, 0.001))

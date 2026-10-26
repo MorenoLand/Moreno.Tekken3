@@ -8,7 +8,7 @@ func play(index: int) -> void:
 	back.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(back)
 	var stream := VideoStreamTheora.new()
-	stream.file = ProjectSettings.globalize_path("res://assets/movies/%02d.ogv" % index)
+	stream.file = "res://assets/movies/%02d.ogv" % index
 	player.stream = stream
 	player.expand = true
 	player.finished.connect(finished.emit)
