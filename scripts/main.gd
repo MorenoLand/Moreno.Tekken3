@@ -23,7 +23,6 @@ const OptionsScreen := preload("res://scripts/menu/options_screen.gd")
 const ContinueScreen := preload("res://scripts/menu/continue_screen.gd")
 const Results := preload("res://scripts/menu/results.gd")
 const Music := preload("res://scripts/core/music.gd")
-const DEMO_SECONDS := 1087.0 / 60.0
 const TEAM_SIZE := 4
 const SURVIVAL_RECOVERY := 0.25
 const LADDER := 10
@@ -95,11 +94,7 @@ func _attract() -> void:
 		var view := FightView.new()
 		_swap(view)
 		view.finished.connect(func(_w): _records())
-		view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second])], home["stage"] % 15, [first, second], true, false, {"demo": true})
-		# The demo fight is cut after 1087 frames (the oracle leaves the fight scene at that count), match over or not.
-		get_tree().create_timer(DEMO_SECONDS).timeout.connect(func():
-			if current == view:
-				_records()))
+		view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second])], home["stage"] % 15, [first, second], true, false, {"demo": true}))
 func _records() -> void:
 	music.preview(6, false)
 	var page := RecordsScreen.new(attract_page)
