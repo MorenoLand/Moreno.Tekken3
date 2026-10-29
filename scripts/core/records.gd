@@ -25,26 +25,21 @@ static func times() -> Array:
 		rows.append({"character": c, "value": best})
 	rows.sort_custom(func(a, b): return a["value"] < b["value"])
 	return rows.slice(0, 10)
+# A high score table of runs, not a best per character: a run is inserted before the first entry with fewer wins
+# (so an equal score ranks below the older one) and the tenth falls off (exe 0x800b47dc).
 static func survivors() -> Array:
 	Save._load()
 	var rows := []
 	for entry in DEFAULT_SURVIVORS:
 		rows.append({"character": entry[0], "value": entry[1]})
-	var mine: Dictionary = Save.data["survivors"]
-	for key in mine:
-		var c := character_of(int(key))
-		var found := false
-		for row in rows:
-			if row["character"] == c:
-				row["value"] = maxi(row["value"], int(mine[key]))
-				found = true
-		if not found:
-			rows.append({"character": c, "value": int(mine[key])})
-	var indexed := []
-	for i in rows.size():
-		indexed.append([rows[i], i])
-	indexed.sort_custom(func(a, b): return a[0]["value"] > b[0]["value"] or (a[0]["value"] == b[0]["value"] and a[1] < b[1]))
-	return indexed.map(func(pair): return pair[0]).slice(0, 10)
+	for run in Save.data["survivor_runs"]:
+		var at := 0
+		while at < rows.size() and rows[at]["value"] >= int(run[1]):
+			at += 1
+		if at < rows.size():
+			rows.insert(at, {"character": character_of(int(run[0])), "value": int(run[1])})
+			rows.pop_back()
+	return rows
 # Share of all arcade clears, in percent, per character.
 static func usage() -> Array:
 	Save._load()
