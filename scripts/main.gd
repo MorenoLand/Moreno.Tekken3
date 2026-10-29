@@ -99,8 +99,13 @@ func _records() -> void:
 	music.preview(6, false)
 	var page := RecordsScreen.new(attract_page)
 	attract_page += 1
-	page.finished.connect(_title)
+	page.finished.connect(_namco_again)
 	_swap(page)
+func _namco_again() -> void:
+	music.play_track("none")
+	var namco := NamcoScreen.new()
+	_swap(namco)
+	namco.finished.connect(_title)
 func _mode(item: String) -> void:
 	if item == "QUIT GAME":
 		get_tree().quit()
