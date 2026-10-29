@@ -15,7 +15,7 @@ const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 
 const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE", "TEKKEN BALL MODE", "TEKKEN FORCE MODE"]
 const ForceFlow := preload("res://scripts/force/force_flow.gd")
 var ball_kind := 0
-var attract_page := 0
+var records_shown := 0
 const Save := preload("res://scripts/core/save.gd")
 const NamcoScreen := preload("res://scripts/menu/namco_screen.gd")
 const Exe := preload("res://scripts/core/exe.gd")
@@ -95,10 +95,10 @@ func _attract() -> void:
 		_swap(view)
 		view.finished.connect(func(_w): _records())
 		view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second])], home["stage"] % 15, [first, second], true, false, {"demo": true}))
-func _records() -> void:
+func _records(which: int = -1) -> void:
 	music.preview(6, false)
-	var page := RecordsScreen.new(attract_page)
-	attract_page += 1
+	var page := RecordsScreen.new(records_shown, which)
+	records_shown += 1
 	page.finished.connect(_namco_again)
 	_swap(page)
 func _namco_again() -> void:
@@ -230,7 +230,7 @@ func _finish_run() -> void:
 	for r in fresh:
 		lines.append("NEW CHARACTER")
 		lines.append(_roster_name(r))
-	var after := func(): _summary(lines, _title)
+	var after := func(): _summary(lines, func(): _records(0 if mode == "TIME ATTACK MODE" else 2))
 	if FileAccess.file_exists("res://assets/movies/%02d.ogv" % ending):
 		var movie := Movie.new()
 		_swap(movie)
@@ -269,7 +269,7 @@ func _after(winner: int) -> void:
 				var lines := ["GAME OVER", "%d WINS" % wins]
 				if Save.record_survival(wins, picked[0]):
 					lines.append("NEW RECORD")
-				_summary(lines, _title)
+				_summary(lines, func(): _records(1))
 		"TEAM BATTLE MODE":
 			var loser := 1 - winner if winner >= 0 else 0
 			carry[winner] = maxf(sim.fraction(winner), 0.05)

@@ -38,8 +38,9 @@ var viewport := SubViewport.new()
 var camera := Camera3D.new()
 var stage := Stage.new()
 var rig := Node3D.new()
-func _init(pass_index: int = 0) -> void:
-	page = pass_index % 3
+# The stage follows a counter of record pages shown; the attract loop also takes the page from it, a finished mode picks its own.
+func _init(pass_index: int = 0, which: int = -1) -> void:
+	page = pass_index % 3 if which < 0 else which
 	stage_index = pass_index % 15
 func _ready() -> void:
 	var exe := Exe.new(FileAccess.get_file_as_bytes("res://assets/system/SLUS_004.02"))
