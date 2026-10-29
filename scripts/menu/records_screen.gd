@@ -99,7 +99,7 @@ func _backdrop() -> void:
 # The backdrop is the stage turned about its own vertical axis (3 / 4096 of a turn per frame from a start angle that
 # depends on the page), stretched 1.667 vertically and seen with H = 500: values read from the GTE of the original.
 func _camera(f: int) -> void:
-	var angle := deg_to_rad(START_ANGLE[stage_index]) + TAU * 3.0 / 4096.0 * f
+	var angle := deg_to_rad(START_ANGLE[stage_index] + 0.4) + TAU * 3.0 / 4096.0 * f
 	var basis := Basis(Vector3.UP, angle) * Basis.from_scale(Vector3(1.0, 6826.0 / 4096.0, 1.0))
 	rig.transform = Transform3D(basis, Vector3(0.0, -351.0 * Stage.SCALE, -624.0 * Stage.SCALE))
 func _rows(exe) -> void:
