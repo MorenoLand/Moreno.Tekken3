@@ -89,7 +89,10 @@ func _backdrop() -> void:
 	env.environment.background_mode = Environment.BG_COLOR
 	env.environment.background_color = Color(0.05, 0.05, 0.08)
 	viewport.add_child(env)
-	camera.fov = rad_to_deg(2.0 * atan(240.0 / CAMERA_H))
+	# The projection centre of the dumped polygons is at (190, 237.3) in the 368 x 480 picture (fitted: stage vertices land within a pixel).
+	camera.near = 0.05
+	camera.keep_aspect = Camera3D.KEEP_HEIGHT
+	camera.set_frustum(2.0 * camera.near * 240.0 / CAMERA_H, Vector2(-6.0 / CAMERA_H * camera.near, 2.7 / CAMERA_H * camera.near), camera.near, 100.0)
 	viewport.add_child(camera)
 	camera.current = true
 	_camera(0)
