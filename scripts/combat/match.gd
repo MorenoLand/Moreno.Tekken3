@@ -26,6 +26,7 @@ var pads := [0, 0]
 var edges := [0, 0]
 var motion
 var practice := false
+var ai_practice := false
 signal round_over(winner: int)
 signal match_over(winner: int)
 enum Phase {INTRO, FIGHT, ROUND_OVER, MATCH_OVER}
@@ -499,7 +500,7 @@ func tick() -> void:
 		var flip: int = ram.u8(a + 0xc6)
 		var pad: int = pads[p]
 		var edge: int = edges[p]
-		if ram.u8(a + 0xc5) != 0 and not practice:
+		if ram.u8(a + 0xc5) != 0 and (not practice or ai_practice):
 			flip = 0
 			pad = 0
 			edge = 0

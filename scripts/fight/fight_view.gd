@@ -2,6 +2,7 @@ extends SubViewportContainer
 const Exe := preload("res://scripts/core/exe.gd")
 const Fighter := preload("res://scripts/fighter/fighter.gd")
 const Stage := preload("res://scripts/fight/stage.gd")
+const Practice := preload("res://scripts/fight/practice.gd")
 const Match := preload("res://scripts/combat/match.gd")
 const Hud := preload("res://scripts/fight/hud.gd")
 const Sfx := preload("res://scripts/fight/sfx.gd")
@@ -20,6 +21,7 @@ signal finished(winner: int)
 signal quit
 var sim
 var paused := false
+var training
 var orbit := -1.0
 var sfx
 var camera_ready := false
@@ -132,6 +134,14 @@ func start(ids: Array, stage_index: int = 0, roster: Array = [0, 1], versus: boo
 		ball_hud.setup(hud)
 	if options.get("stage", 0) > 0 or options.get("solo", false):
 		hud.show_coin()
+	if training != null:
+		training.queue_free()
+		training = null
+	if practice:
+		training = Practice.new()
+		add_child(training)
+		training.setup(self)
+		training.player_select.connect(func(): quit.emit())
 	if options.get("demo", false):
 		hud.start_demo()
 		sim.computer = [true, true]
@@ -148,6 +158,11 @@ func _pad(player: int) -> int:
 	return bits
 func _unhandled_input(event: InputEvent) -> void:
 	if sim == null or hud == null or hud.demo:
+		return
+	if training != null and training.input(event):
+		get_viewport().set_input_as_handled()
+		return
+	if training != null:
 		return
 	if event.is_action_pressed("menu_start") or (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE):
 		if paused and event.is_action_pressed("menu_start") == false:
@@ -242,6 +257,9 @@ func _physics_process(_delta: float) -> void:
 	if paused:
 		return
 	var bits := [_pad(0), _pad(1)]
+	if training != null:
+		training.step()
+		bits[1] = training.pad(bits[1])
 	for p in 2:
 		sim.pads[p] = bits[p]
 		sim.edges[p] = bits[p] & ~previous[p] & 0xf0
@@ -276,6 +294,11 @@ func _sound() -> void:
 		sfx.play_entry(event[0], event[1])
 	sim.sounds.clear()
 func _banner() -> void:
+	if training != null:
+		if sim.phase == sim.Phase.ROUND_OVER:
+			var knocked: bool = sim.ram.u32(sim.actor(0) + 0x3f4) == 0
+			hud.say("K.O." if knocked or sim.fraction(1) < 1.0 else "PERFECT!")
+		return
 	var final: bool = sim.round_number >= sim.rounds_to_win * 2 - 1
 	match sim.phase:
 		sim.Phase.INTRO:

@@ -101,6 +101,11 @@ func _column(clut: int) -> TextureRect:
 	rect.size = Vector2(BAR_WIDTH, BAR_HEIGHT)
 	rect.position = Vector2(0, BAR_Y)
 	return rect
+# Practice mode draws no health bars, names, lamps or clock (only its banner and attack data lines).
+func hide_bars() -> void:
+	for child in screen.get_children():
+		if not child in banners:
+			child.visible = false
 func bind(match_sim, roster_indices: Array) -> void:
 	sim = match_sim
 	roster = roster_indices
