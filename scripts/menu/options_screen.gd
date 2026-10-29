@@ -22,11 +22,13 @@ const PREVIEW_LIT := [
 	[1, 1, 1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0, 0, 0],
 ]
 const PREVIEW_CLUTS := [0x7e55, 0x7e52, 0x7e57, 0x7e56, 0x7e51, 0x7e54, 0x7e58, 0x7e50]
-const DEFAULT_RECORDS := [["XIAOYU", 7, 50], ["YOSHIMITSU", 4, 51], ["NINA", 5, 52], ["LAW", 1, 53], ["HWOARANG", 6, 54], ["EDDY", 8, 55], ["PAUL", 0, 56], ["KING", 3, 57], ["LEI", 2, 58], ["JIN", 9, 59]]
+const Records := preload("res://scripts/core/records.gd")
+const RECORD_TITLES := ["CHARACTER TIME ATTACK DATA", "GREATEST SURVIVORS DATA", "CHARACTER USAGE DATA", "WIN AVERAGE DATA"]
 const KEY_BUTTONS := ["lp", "rp", "lk", "rk"]
 var font
 var vram: PackedInt32Array
 var page := "top"
+var record_page := 0
 var selected := 0
 var capturing := false
 var capture_index := 0
@@ -237,38 +239,83 @@ func _row_at(left: float, label: String, value: String, y: float, on: bool) -> v
 	if on:
 		lit = _block(Vector2(left - 3, y - 3), Vector2(label.length() * 9 + 6, 22), Color8(0x1f, 0x3e, 0xf7))
 	_text(label, 0, 0x7e15 if on else 0x7e1a, Vector2(left, y))
-func _record_rows() -> Array:
-	Save._load()
-	var rows := []
-	for entry in DEFAULT_RECORDS:
-		rows.append([entry[0], entry[2] * 3600])
-	for key in Save.data["time_attack"]:
-		rows.append([_costume_name(int(key) * 4), int(Save.data["time_attack"][key])])
-	rows.sort_custom(func(a, b): return a[1] < b[1])
-	return rows.slice(0, 10)
-func _costume_name(costume: int) -> String:
+func _character_name(character: int) -> String:
+	return _roster_name(Records.roster_of(character))
+func _roster_name(roster: int) -> String:
 	var e = font.fonts[0]["exe"]
-	return e.cstring(e.u32(e.u32(0x80097d40 + costume * 4)))
+	return e.cstring(e.u32(e.u32(0x80097d40 + roster * 16)))
+# The four pages of OPTION MODE / RECORDS (paged with left and right; positions from the original draw lists).
 func _draw_records() -> void:
-	_text("PAGE:1", 0, 0x7e16, Vector2(288, 36))
+	_text("PAGE:%d" % (record_page + 1), 0, 0x7e16, Vector2(288, 36))
 	_title("RECORDS", 139.0)
-	_text("CHARACTER TIME ATTACK DATA", 0, 0x7e16, Vector2(67, 90))
-	_text("TIME", 0, 0x7e16, Vector2(234, 126))
-	_text("NAME", 0, 0x7e16, Vector2(297, 126))
-	var rows := _record_rows()
+	var title: String = RECORD_TITLES[record_page]
+	_text(title, 0, 0x7e16, Vector2(int(184.0 - title.length() * 9 / 2.0), 90))
+	match record_page:
+		0:
+			_text("TIME", 0, 0x7e16, Vector2(234, 126))
+			_text("NAME", 0, 0x7e16, Vector2(297, 126))
+		1:
+			_text("WINS", 0, 0x7e16, Vector2(234, 126))
+			_text("NAME", 0, 0x7e16, Vector2(297, 126))
+		2:
+			_text("RATE", 0, 0x7e16, Vector2(234, 126))
+			_text("TOTAL", 0, 0x7e16, Vector2(288, 126))
+		3:
+			_text("W.AVE", 0, 0x7e16, Vector2(171, 126))
+			_text("WIN", 0, 0x7e16, Vector2(252, 126))
+			_text("LOSE", 0, 0x7e16, Vector2(297, 126))
+	var rows: Array = _record_table()
 	for i in rows.size():
 		var y: float = 146 + i * 20
 		var ranks := ["1ST", "2ND", "3RD"]
 		_text(ranks[i] if i < 3 else "%dTH" % (i + 1), 0, 0x7e16, Vector2(27 if i < 9 else 18, y))
-		var name: String = rows[i][0]
+		var c: int = rows[i]["character"]
+		var name := _character_name(c)
 		_text(name, 0, 0x7e16, Vector2(126 - name.length() * 9 / 2.0, y))
-		var f: int = rows[i][1]
-		_text("%02d'%02d\"%02d" % [f / 3600, f / 60 % 60, (f % 60) * 100 / 60], 0, 0x7e16, Vector2(198, y))
-		_text(name.substr(0, 3), 0, 0x7e16, Vector2(306, y))
+		var value: int = rows[i]["value"]
+		match record_page:
+			0:
+				var t := Records.clock(value)
+				_text("%02d'%02d\"%02d" % [t[0], t[1], t[2]], 0, 0x7e16, Vector2(198, y))
+				_text(Records.CODES[c], 0, 0x7e16, Vector2(306, y))
+			1:
+				var digits := str(value)
+				_text(digits, 0, 0x7e16, Vector2(225 - digits.length() * 9, y))
+				_text("WIN" if value == 1 else "WINS", 0, 0x7e16, Vector2(234, y))
+				_text(Records.CODES[c], 0, 0x7e16, Vector2(306, y))
+			2:
+				var rate := "%d%%" % value
+				_text(rate, 0, 0x7e11 if value > 0 else 0x7e16, Vector2(270 - rate.length() * 9, y))
+				var total := str(rows[i]["count"])
+				_text(total, 0, 0x7e16, Vector2(333 - total.length() * 9, y))
+			3:
+				var average := "%d%%" % value
+				_text(average, 0, 0x7e16, Vector2(216 - average.length() * 9, y))
+				var won := str(rows[i]["wins"])
+				_text(won, 0, 0x7e16, Vector2(279 - won.length() * 9, y))
+				var lost := str(rows[i]["losses"])
+				_text(lost, 0, 0x7e16, Vector2(333 - lost.length() * 9, y))
 	_text("NEXT", 0, 0x7e17, Vector2(63, 380))
 	_text(": LEFT OR RIGHT", 0, 0x7e16, Vector2(99, 380))
 	_text("EXIT", 0, 0x7e12, Vector2(63, 420))
 	_text(": PUSH", 0, 0x7e16, Vector2(99, 420))
+	_text("OR", 0, 0x7e16, Vector2(216, 420))
+	for k in 4:
+		var image := Tim.decode_region(vram, 0x21f, 0x7ed4 + k, Rect2i(96 + 12 * k, 224, 12, 20))
+		var icon := TextureRect.new()
+		icon.texture = ImageTexture.create_from_image(image)
+		icon.size = Vector2(12, 20)
+		icon.position = Vector2([161, 179, 197, 241][k], 418)
+		layer.add_child(icon)
+func _record_table() -> Array:
+	match record_page:
+		0:
+			return Records.times()
+		1:
+			return Records.survivors()
+		2:
+			return Records.usage()
+	return Records.averages()
 func _process(delta: float) -> void:
 	pulse += delta * 3.0
 	if lit != null:
@@ -340,7 +387,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			_refresh()
 		return
 	if page == "records":
+		if left or right:
+			record_page = (record_page + (1 if right else 3)) % 4
+			blip(BLIP_CURSOR)
+			_refresh()
+			return
 		if confirm or event.is_action_pressed("menu_back"):
+			record_page = 0
 			page = "top"
 			selected = 3
 			blip(BLIP_CONFIRM)

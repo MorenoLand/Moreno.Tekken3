@@ -168,6 +168,8 @@ func _start_fight(first: int, second: int) -> void:
 	wins = 0
 	carry = [1.0, 1.0]
 	used = [first]
+	if mode in ["ARCADE MODE", "TIME ATTACK MODE", "SURVIVAL MODE"]:
+		Save.record_play(first)
 	match mode:
 		"VS MODE":
 			_fight(first, second, true)

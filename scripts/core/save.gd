@@ -4,7 +4,7 @@ const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 
 # Keys are portrait/roster ids (exe name table order).
 const LOCKED_AT_START := {16: 1, 15: 5, 17: 8}
 const DOCTOR_B := 19
-static var data := {"endings": [], "usage": {}, "time_attack": {}, "survival": 0, "survivor_runs": [], "clears": 0, "unlock_all": false, "force_keys": 0, "force_best": 0, "force_clear": false}
+static var data := {"endings": [], "usage": {}, "time_attack": {}, "survival": 0, "survivor_runs": [], "fights": {}, "clears": 0, "unlock_all": false, "force_keys": 0, "force_best": 0, "force_clear": false}
 static var loaded := false
 static func _load() -> void:
 	if loaded:
@@ -45,13 +45,17 @@ static func record_clear(character: int) -> Array:
 	if not data["endings"].has(character):
 		data["endings"].append(character)
 	data["clears"] += 1
-	data["usage"][str(character)] = int(data["usage"].get(str(character), 0)) + 1
 	var fresh := []
 	for r in 21:
 		if unlocked(r) and not before[r]:
 			fresh.append(r)
 	save()
 	return fresh
+# One more game as this character (arcade, time attack and survival each count once, won or lost; checked on the original).
+static func record_play(roster: int) -> void:
+	_load()
+	data["usage"][str(roster)] = int(data["usage"].get(str(roster), 0)) + 1
+	save()
 static func record_time(character: int, frames: int) -> bool:
 	_load()
 	var key := str(character)

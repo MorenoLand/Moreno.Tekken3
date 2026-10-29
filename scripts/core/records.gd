@@ -58,3 +58,18 @@ static func usage() -> Array:
 static func clock(frames: int) -> Array:
 	var seconds := frames / 60
 	return [seconds / 60, seconds % 60, (frames % 60) * 100 / 60]
+# Win average page: wins and losses of every character, best share first (ties in character order).
+static func averages() -> Array:
+	Save._load()
+	var rows := []
+	for c in 21:
+		var pair: Array = Save.data["fights"].get(str(roster_of(c)), [0, 0])
+		var wins := int(pair[0])
+		var losses := int(pair[1])
+		var total := wins + losses
+		rows.append({"character": c, "value": 0 if total == 0 else wins * 100 / total, "wins": wins, "losses": losses})
+	var indexed := []
+	for i in rows.size():
+		indexed.append([rows[i], i])
+	indexed.sort_custom(func(a, b): return a[0]["value"] > b[0]["value"] or (a[0]["value"] == b[0]["value"] and a[1] < b[1]))
+	return indexed.map(func(pair): return pair[0]).slice(0, 10)
