@@ -1,4 +1,5 @@
 extends Control
+const RecordsScreen := preload("res://scripts/menu/records_screen.gd")
 const Pack := preload("res://scripts/core/asset_pack.gd")
 const Movie := preload("res://scripts/menu/movie_screen.gd")
 const Title := preload("res://scripts/menu/title.gd")
@@ -14,6 +15,7 @@ const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 
 const PLAYABLE := ["ARCADE MODE", "VS MODE", "TEAM BATTLE MODE", "TIME ATTACK MODE", "SURVIVAL MODE", "PRACTICE MODE", "TEKKEN BALL MODE", "TEKKEN FORCE MODE"]
 const ForceFlow := preload("res://scripts/force/force_flow.gd")
 var ball_kind := 0
+var attract_page := 0
 const Save := preload("res://scripts/core/save.gd")
 const NamcoScreen := preload("res://scripts/menu/namco_screen.gd")
 const Exe := preload("res://scripts/core/exe.gd")
@@ -91,8 +93,14 @@ func _attract() -> void:
 	intro.finished.connect(func():
 		var view := FightView.new()
 		_swap(view)
-		view.finished.connect(func(_w): _title())
+		view.finished.connect(func(_w): _records())
 		view.start([_model_for(ROSTER_TO_CHARACTER[first]), _model_for(ROSTER_TO_CHARACTER[second])], home["stage"] % 15, [first, second], true, false, {"demo": true}))
+func _records() -> void:
+	music.preview(6, false)
+	var page := RecordsScreen.new(attract_page)
+	attract_page += 1
+	page.finished.connect(_title)
+	_swap(page)
 func _mode(item: String) -> void:
 	if item == "QUIT GAME":
 		get_tree().quit()
@@ -252,7 +260,7 @@ func _after(winner: int) -> void:
 				_fight(picked[0], _random_opponent(), false, false, {"rounds": 1, "fractions": carry.duplicate()})
 			else:
 				var lines := ["GAME OVER", "%d WINS" % wins]
-				if Save.record_survival(wins):
+				if Save.record_survival(wins, picked[0]):
 					lines.append("NEW RECORD")
 				_summary(lines, _title)
 		"TEAM BATTLE MODE":

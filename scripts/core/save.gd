@@ -4,7 +4,7 @@ const ROSTER_TO_CHARACTER := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 
 # Keys are portrait/roster ids (exe name table order).
 const LOCKED_AT_START := {16: 1, 15: 5, 17: 8}
 const DOCTOR_B := 19
-static var data := {"endings": [], "usage": {}, "time_attack": {}, "survival": 0, "clears": 0, "unlock_all": false, "force_keys": 0, "force_best": 0, "force_clear": false}
+static var data := {"endings": [], "usage": {}, "time_attack": {}, "survival": 0, "survivors": {}, "clears": 0, "unlock_all": false, "force_keys": 0, "force_best": 0, "force_clear": false}
 static var loaded := false
 static func _load() -> void:
 	if loaded:
@@ -61,8 +61,10 @@ static func record_time(character: int, frames: int) -> bool:
 		save()
 		return true
 	return false
-static func record_survival(wins: int) -> bool:
+static func record_survival(wins: int, roster: int = -1) -> bool:
 	_load()
+	if roster >= 0 and wins > int(data["survivors"].get(str(roster), 0)):
+		data["survivors"][str(roster)] = wins
 	if wins > int(data["survival"]):
 		data["survival"] = wins
 		save()
